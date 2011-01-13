@@ -1,0 +1,27 @@
+<html>
+<head><title>Jetpack runner</title></head>
+<body>
+<script src="jquery-1.4.3.min.js"></script>
+<script src="jetinspector.js"></script>
+<link rel="stylesheet" type="text/css" href="jetinspector.css" />
+
+<div id="binaries">
+  Mozilla binary used: 
+  <select id="binary"></select>
+</div>
+<br/>
+<input type="checkbox" id="run_as_application" /> Run as application (instead of extension)
+<br />
+<div id="packages-box">
+  <h1>Packages:</h1>
+  <ul id="packages-list"></ul>
+</div>
+
+<div id="package-description">
+  <h1 id="package-name"></h1>
+  <div id="package-libs"></div>
+  <div id="package-tests"></div>
+</div>
+
+</body>
+</html>

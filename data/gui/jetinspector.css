@@ -1,0 +1,39 @@
+h1 {
+  font-size: 14px;
+}
+ul {
+  margin: 0;
+  padding-left: 10px;
+}
+li {
+  list-style:none;
+  cursor: pointer;
+}
+li:hover {
+  text-decoration: underline;
+}
+
+#packages-box {
+  float: left;
+  width: 200px;
+}
+
+#package-description {
+  /*display:none;*/
+  margin-left: 200px;
+}
+#package-description li {
+  padding-left: 10px;
+}
+#package-name {
+  font-size: 18px;
+}
+.package-dir-name {
+  font-weight: bold;
+}
+
+#package-libs {
+  float: left;
+  width: 50%;
+}
+

@@ -100,14 +100,15 @@ function openPackage(package) {
 }
 
 function launchTest(package, dirName,dirType,file) {
+  var packages = require("packages-inspector").getPackages(packagesPath);
   
   if (dirType=="tests") {
     
-    require("harness-commander").launchTest(prefs.get("binary-path"), packagesPath, prefs.get("run-as-app"), package, dirName, file.name);
+    require("harness-commander").launchTest(prefs.get("binary-path"), packages, prefs.get("run-as-app"), package, dirName, file.name);
     
   } else if (dirType=="libs") {
     
-    require("harness-commander").launchMain(prefs.get("binary-path"), packagesPath, prefs.get("run-as-app"), package, dirName);
+    require("harness-commander").launchMain(prefs.get("binary-path"), packages, prefs.get("run-as-app"), package, dirName);
     
   }
   

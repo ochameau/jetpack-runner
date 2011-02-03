@@ -1,0 +1,12 @@
+{
+    "name": "package-test", 
+    "license": "GPL 2.0", 
+    "author": "Alexandre Poirot", 
+    "version": "0.1", 
+    "dependencies": [
+        
+    ], 
+    "main": "main", 
+    "id": "jid0-k60wfE2Xuwso9RsQpqdbOXw8SGE", 
+    "description": "Jetpack application test"
+}

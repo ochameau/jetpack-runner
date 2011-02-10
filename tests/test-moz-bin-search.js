@@ -8,4 +8,6 @@ exports.testgetBinaries = function (test) {
     test.assert(info.name.match(/Firefox|Thunderbird|Iceweasel|Xulrunner/));
     test.assert(info.version.match(/\d+(\.\d+)*/));
   }
+  test.assertEqual(binaries[0], mbs.getCurrentProcessBinary());
 }
+

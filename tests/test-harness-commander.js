@@ -3,6 +3,9 @@ const self = require("self");
 const path = require("path");
 const fs = require("fs");
 const { Cc, Ci, Cu } = require("chrome");
+const process = require("process");
+const subprocess = require("subprocess");
+const zip = require("zip");
 
 const AddonManager = Cu.import("resource://gre/modules/AddonManager.jsm").AddonManager;
 
@@ -10,6 +13,11 @@ function getDataFilePath(file) {
   return require("url").toFilename(self.data.url("tests/"+file));
 }
 const xpiPath = getDataFilePath("test-harness/test.xpi");
+let options = null;
+
+require("unload").when(function () {
+  fs.unlinkSync(xpiPath);
+});
 
 exports.testXPI = function (test) {
   let apiutilsPackagePath = path.join(require("url").toFilename(self.data.url()),"..","..","api-utils");
@@ -19,13 +27,14 @@ exports.testXPI = function (test) {
   let package = require("packages-inspector").getPackage(packagePath);
   
   
-  harness.buildXPI({"api-utils":apiutils,"package-test":package}, package, xpiPath);
+  options = harness.buildXPI({"api-utils":apiutils,"package-test":package}, package, xpiPath);
   
   //test.assertEqual(fs.statSync(xpiPath).size, 138821, "xpi file size is the expected one");
-  test.pass();
+  test.pass("XPI built");
 }
 
-exports.testLaunch = function (test) {
+
+exports.testLocalLaunch = function (test) {
   // Remove HARNESS_OPTIONS or it will be used by harness.js:503->getDefaults()
   let environ = Cc["@mozilla.org/process/environment;1"]
                   .getService(Ci.nsIEnvironment);
@@ -34,19 +43,24 @@ exports.testLaunch = function (test) {
   let file = Cc['@mozilla.org/file/local;1'].createInstance(Ci.nsILocalFile);
   file.initWithPath(xpiPath);
   
+  // Get a install object from our xpi
   AddonManager.getInstallForFile(file, function(install) {
+    // Check meta data
     test.assertEqual(install.state, AddonManager.STATE_DOWNLOADED);
     test.assertEqual(install.type, "extension");
     test.assertEqual(install.version, "0.1");
     test.assertEqual(install.name, "package-test");
     
+    // Watch for install event
     AddonManager.addInstallListener({
       onInstallEnded: function(aAddon, aStatus) {
-        test.assertEqual(aAddon, install);
+        test.assertEqual(aAddon, install, "install objects are equals");
         gotInstalledEvent = true;
       }
     });
     
+    // Watch for an event dispatched by our jetpack example
+    // which prove that the addon works!
     let observerService = Cc["@mozilla.org/observer-service;1"]
                               .getService(Ci.nsIObserverService);
     let observer = {
@@ -54,7 +68,6 @@ exports.testLaunch = function (test) {
         test.assertEqual(data, "ok");
         observerService.removeObserver(observer, "package-test");
         
-        fs.unlinkSync(xpiPath);
         test.done();
       }
     };
@@ -65,4 +78,58 @@ exports.testLaunch = function (test) {
   });
   
   test.waitUntilDone();
+}
+
+
+exports.testRemoteLaunch = function (test) {
+  test.waitUntilDone(10000);
+  
+  // Remove HARNESS_OPTIONS or it will be used by harness.js:503->getDefaults()
+  let environ = Cc["@mozilla.org/process/environment;1"]
+                  .getService(Ci.nsIEnvironment);
+  environ.set("HARNESS_OPTIONS", "");
+  
+  let profile = path.join(require("url").toFilename(self.data.url()),
+    "..", "workdir", "profile");
+  
+  let extensionFolder = path.join(profile, "extensions", options.bundleID);
+  // Create extension folder, in case it doesn't already exists
+  try {
+    fs.mkdir(path.join(profile, "extensions"));
+  } catch(e) {}
+    
+  // Extract xpi in extensions profile folder
+  let xpi = new zip.ZipReader(xpiPath);
+  xpi.extractAll(extensionFolder);
+  xpi.close();
+  
+  // Override some prefs by using user.js in profile directory
+  let userpref = path.join(profile, "user.js");
+  fs.writeFileSync(userpref, 'user_pref("browser.shell.checkDefaultBrowser", false);\n' +
+    'user_pref("browser.dom.window.dump.enabled", true);');
+  
+  let p = require("moz-launcher").launch({
+    binary: require("moz-bin-search").getCurrentProcessBinary(),
+    args: ["-profile", profile, "-no-remote", "google.fr"],
+    stdout: function (data) {
+      if (data.indexOf("package-test:main.js OK")==0) {
+        test.pass("Got dump from extension in stdout");
+        p.kill();
+      }
+    },
+    stderr: function (data) {
+      
+    },
+    quit: function () {
+      test.pass("Extension seems to be working and firefox has been killed");
+      // Wait a litle bit before removing files
+      // because process may still block them
+      require("timer").setTimeout(function () {
+        require("rm-rec").rm(profile, function(err) {
+          test.pass("Profile cleaned");
+          test.done();
+        });
+      }, 1000);
+    }
+  });
 }

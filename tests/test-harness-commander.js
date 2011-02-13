@@ -13,10 +13,11 @@ function getDataFilePath(file) {
   return require("url").toFilename(self.data.url("tests/"+file));
 }
 const xpiPath = getDataFilePath("test-harness/test.xpi");
+
 let options = null;
 
 require("unload").when(function () {
-  fs.unlinkSync(xpiPath);
+  fs.unlinkSync(xpiPath);  
 });
 
 exports.testXPI = function (test) {
@@ -110,7 +111,7 @@ exports.testRemoteLaunch = function (test) {
   
   let p = require("moz-launcher").launch({
     binary: require("moz-bin-search").getCurrentProcessBinary(),
-    args: ["-profile", profile, "-no-remote", "google.fr"],
+    args: ["-profile", profile],
     stdout: function (data) {
       if (data.indexOf("package-test:main.js OK")==0) {
         test.pass("Got dump from extension in stdout");
@@ -128,6 +129,79 @@ exports.testRemoteLaunch = function (test) {
         require("rm-rec").rm(profile, function(err) {
           test.pass("Profile cleaned");
           test.done();
+        });
+      }, 1000);
+    }
+  });
+}
+
+
+exports.testRemoteLaunchAsApplication = function (test) {
+  const applicationZipPath = getDataFilePath("test-harness/application.zip");
+  
+  let apiutilsPackagePath = path.join(require("url").toFilename(self.data.url()),"..","..","api-utils");
+  let apiutils = require("packages-inspector").getPackage(apiutilsPackagePath);
+  
+  let packagePath = getDataFilePath("test-harness/package/");
+  let package = require("packages-inspector").getPackage(packagePath);
+  
+  options = harness.buildStandaloneApplication({"api-utils":apiutils,"package-test":package}, package, applicationZipPath);
+  
+  require("unload").when(function () {
+    fs.unlinkSync(applicationZipPath);
+  });
+  test.pass("Application built");
+  
+  test.waitUntilDone(10000);
+  
+  // Remove HARNESS_OPTIONS or it will be used by harness.js:503->getDefaults()
+  let environ = Cc["@mozilla.org/process/environment;1"]
+                  .getService(Ci.nsIEnvironment);
+  environ.set("HARNESS_OPTIONS", "");
+  
+  let workdir = path.join(require("url").toFilename(self.data.url()),
+    "..", "workdir");
+  let profile = path.join(workdir, "profile");
+  let applicationPath = path.join(workdir, "application");
+  let applicationIniPath = path.join(applicationPath, "application.ini");
+  
+  // Extract xpi in extensions profile folder
+  let xpi = new zip.ZipReader(applicationZipPath);
+  xpi.extractAll(applicationPath);
+  xpi.close();
+  
+  // Override some prefs by using user.js in profile directory
+  try {
+    fs.mkdir(profile);
+  } catch(e) {}
+  let userpref = path.join(profile, "user.js");
+  fs.writeFileSync(userpref, 'user_pref("browser.dom.window.dump.enabled", true);');
+  
+  console.log(applicationIniPath);
+  
+  let p = require("moz-launcher").launch({
+    binary: require("moz-bin-search").getCurrentProcessBinary(),
+    args: ["-app", applicationIniPath, "-profile", profile, ],
+    stdout: function (data) {
+      if (data.indexOf("package-test:main.js OK")==0) {
+        test.pass("Got dump from extension in stdout");
+        p.kill();
+      }
+    },
+    stderr: function (data) {
+      
+    },
+    quit: function () {
+      test.pass("Extension seems to be working and firefox has been killed");
+      // Wait a litle bit before removing files
+      // because process may still block them
+      require("timer").setTimeout(function () {
+        require("rm-rec").rm(profile, function(err) {
+          test.pass("Profile cleaned");
+          require("rm-rec").rm(applicationPath, function(err) {
+            test.pass("Application cleaned");
+            test.done();
+          });
         });
       }, 1000);
     }

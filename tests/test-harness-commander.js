@@ -82,7 +82,35 @@ exports.testLocalLaunch = function (test) {
 }
 
 
-exports.testRemoteLaunch = function (test) {
+exports.testRemoteLinkLaunch = function (test) {
+  test.waitUntilDone(10000);
+  
+  let apiutilsPackagePath = path.join(require("url").toFilename(self.data.url()),"..","..","api-utils");
+  let apiutils = require("packages-inspector").getPackage(apiutilsPackagePath);
+  
+  let packagePath = getDataFilePath("test-harness/package/");
+  let package = require("packages-inspector").getPackage(packagePath);
+  
+  var p = harness.launchMain({
+    packages: {"api-utils":apiutils,"package-test":package}, 
+    package: package,
+    binary: require("moz-bin-search").getCurrentProcessBinary(),
+    stdout: function(data) {
+      if (data.indexOf("package-test:main.js OK")==0) {
+        test.pass("Got dump from extension in stdout");
+        p.kill();
+      }
+    },
+    quit: function (data) {
+      test.done();
+    }
+  });
+  require("unload").when(function () {
+    p.kill();
+  });
+}
+
+exports.testRemoteXPILaunch = function (test) {
   test.waitUntilDone(10000);
   
   // Remove HARNESS_OPTIONS or it will be used by harness.js:503->getDefaults()

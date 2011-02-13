@@ -6,8 +6,11 @@ function require(module) {
 var prefs = require("preferences-service");
 var path = require("path");
 var process = require("process");
+var harnessCommander = require("harness-commander");
 
 var packagesPath = path.join(process.cwd(), "..");
+
+var currentPackage = null;
 
 function loadSettings() {
   $("#run_as_application").attr("checked",!!prefs.get("run-as-app"));
@@ -61,7 +64,8 @@ function loadPackagesList() {
 }
 
 function openPackage(package) {
-  $("#package-decription").show();
+  currentPackage = package;
+  $("#package-description").show();
   $("#package-name").text("Package: "+package.name);
   
   var extra = require("packages-inspector").getExtraInfo(package);
@@ -79,15 +83,17 @@ function openPackage(package) {
       for each(var file in filesByDir[dir]) {
         var li = $("<li></li>");
         li.text(file.path.concat([file.name]).join("/"));
-        (function (dir,file) {
-          li.click(function () {
-            try {
-              launchTest(package,dir,dirType,file);
-            } catch(e) {
-              Components.utils.reportError(e+"\n"+e.stack);
-            }
-          });
-        })(dir,file);
+        if (dirType=="tests") {
+          (function (dir,file) {
+            li.click(function () {
+              try {
+                launch(package,dirType,file);
+              } catch(e) {
+                Components.utils.reportError(e+"\n"+e.stack);
+              }
+            });
+          })(dir,file);
+        }
         subUl.append(li);
       }
       ul.append(subUl);
@@ -99,19 +105,75 @@ function openPackage(package) {
   
 }
 
-function launchTest(package, dirName,dirType,file) {
+function launch(package, dirType, file) {
   var packages = require("packages-inspector").getPackages(packagesPath);
   
+  var options = {
+    binary: prefs.get("binary-path"),
+    packages: packages, 
+    runAsApp: prefs.get("run-as-app"),
+    package: package,
+  };
   if (dirType=="tests") {
     
-    require("harness-commander").launchTest(prefs.get("binary-path"), packages, prefs.get("run-as-app"), package, dirName, file.name);
+    if (file)
+      options.testName = file.name;
+    harnessCommander.launchTest(options);
     
   } else if (dirType=="libs") {
     
-    require("harness-commander").launchMain(prefs.get("binary-path"), packages, prefs.get("run-as-app"), package, dirName);
+    harnessCommander.launchMain(options);
     
   }
   
+}
+
+function Run() {
+  launch(currentPackage, "libs");
+}
+
+function Test() {
+  launch(currentPackage, "tests");
+}
+
+const nsIFilePicker = Components.interfaces.nsIFilePicker;
+function selectFile(title, filename, ext) {
+  var fp = Components.classes["@mozilla.org/filepicker;1"]
+               .createInstance(nsIFilePicker);
+  fp.init(window, title, nsIFilePicker.modeSave);
+  fp.appendFilter(title, "*."+ext);
+  fp.appendFilters(nsIFilePicker.filterAll);
+  fp.defaultString = filename;
+  
+  var rv = fp.show();
+  if (rv == nsIFilePicker.returnOK || rv == nsIFilePicker.returnReplace) {
+    return fp.file.path;
+  }
+  return null;
+
+}
+function GetXPI() {
+  var file = selectFile(
+    "XPI file", 
+    currentPackage.name+"-"+
+      (currentPackage.version?currentPackage.version:"1.0")+".xpi", 
+    "xpi");
+  if (!file)
+    return;
+  var packages = require("packages-inspector").getPackages(packagesPath);
+  harnessCommander.buildXPI(packages, currentPackage, file);
+}
+
+function GetApp() {
+  var file = selectFile(
+    "Xulrunner application file", 
+    currentPackage.name+"-"+
+      (currentPackage.version?currentPackage.version:"1.0")+".zip", 
+    "zip");
+  if (!file)
+    return;
+  var packages = require("packages-inspector").getPackages(packagesPath);
+  harnessCommander.buildStandaloneApplication(packages, currentPackage, file);
 }
 
 window.addEventListener("load",function () {

@@ -8,7 +8,7 @@ var path = require("path");
 var process = require("process");
 var harnessCommander = require("harness-commander");
 
-var packagesPath = path.join(process.cwd(), "..");
+var packagesPath = "";//path.join(process.cwd(), "..");
 
 var currentPackage = null;
 
@@ -40,11 +40,22 @@ function loadBinaries() {
   });
 }
 
-function loadPackagesList() {
+function downdloadAndUseSDK() {
+  var url = $("#sdk").val();
   
-  var packages = require("packages-inspector").getPackages(packagesPath);
+  require("online-sdk").download(url, function (dir) {
+    packagesPath = dir;
+    loadPackagesList();
+  });
+}
+
+function loadPackagesList() {
+  var packages = null;
+  if (packagesPath)
+    packages = require("packages-inspector").getPackages(packagesPath);
   var domTarget = $("#packages-list");
   
+  var count = 0;
   for(var i in packages) {
     var p = packages[i];
     var elt = $("<li></li>");
@@ -59,8 +70,20 @@ function loadPackagesList() {
       });
     })(elt,p);
     domTarget.append(elt);
+    count++;
   }
   
+  if (count==0) {
+    require("online-sdk").getAvailableVersions(function (err, list) {
+      for(var i=0; i<list.length; i++) {
+        $("#sdk").append('<option value="'+list[i].url+'" '+(i==list.length-1?'selected="true"':'')+'>'+list[i].version+'</option>');
+      }
+    });
+    $("#sdk-selection").show();
+    domTarget.hide();
+  } else {
+    domTarget.show();
+  }
 }
 
 function openPackage(package) {

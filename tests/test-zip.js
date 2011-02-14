@@ -26,6 +26,9 @@ exports.testReader = function(test) {
   let dir = require("url").toFilename(self.data.url("tests/zip-extract"));
   zr.extractAll(dir);
   zr.close();
-  
   test.pass("zip extracted");
+  test.waitUntilDone();
+  require("rm-rec").rm(dir, function(err) {
+    test.done();
+  });
 }

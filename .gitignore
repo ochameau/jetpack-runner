@@ -1,4 +1,5 @@
 workdir/profile/*
+workdir/sdk
 workdir/harness_log
 workdir/harness_result
 data/addon-runner@mozilla.com/harness-options.json

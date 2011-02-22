@@ -5,8 +5,6 @@ const path = require("path");
 exports.testLaunchFirefox = function(test) {
   test.waitUntilDone(10000);
   
-  let command = require("moz-bin-search").getCurrentProcessBinary();
-  
   let profile = path.join(require("url").toFilename(self.data.url()),
     "..","workdir","profile-launch-test");
   
@@ -23,7 +21,7 @@ exports.testLaunchFirefox = function(test) {
   // Open firefox with a new tab that execute dump('dumpok')
   // So we retrieve this message in stdout and confirm that everything works!
   let p = require("moz-launcher").launch({
-    binary: require("moz-bin-search").getCurrentProcessBinary(),
+    binary: require("moz-bin-search").getBestBinary(),
     args: ["-profile",profile,"-no-remote","javascript:dump('dumpok')"],
     stdout: function (data) {
       if (data == "dumpok") {

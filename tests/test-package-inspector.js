@@ -26,6 +26,7 @@ exports.testGetPackages = function (test) {
     test.assertEqual(p.lib[0],"lib");
     test.assertEqual(p.root_dir,getDataFilePath("test-pi/"+repo+"/"+name));
   }
+  list.sort(function (a, b) {return a.name>b.name;});
   test.assertEqual(list.length,4);
   test.assertEqual(list[0].name,"aardvark");
   test.assertEqual(list[1].name,"api-utils");
@@ -43,10 +44,12 @@ exports.testPackagesConflict = function (test) {
 exports.testGetExtraInfos = function (test) {
   let packages = pi.getPackages(getDataFilePath("test-pi/packages"));
   let info = pi.getExtraInfo(packages["api-utils"]);
+  info.libs.lib.sort(function (a, b) a.name<b.name);
   test.assertEqual(info.libs.lib.length,3);
   test.assertEqual(JSON.stringify(info.libs.lib[0]),JSON.stringify({path:["folder","sub-folder"],name:"sub-sub-lib.js"}));
   test.assertEqual(JSON.stringify(info.libs.lib[1]),JSON.stringify({path:["folder"],name:"sub-lib.js"}));
   test.assertEqual(JSON.stringify(info.libs.lib[2]),JSON.stringify({path:[],name:"lib.js"}));
+  info.tests.tests.sort(function (a, b) a.name>b.name);
   test.assertEqual(info.tests.tests.length,3);
   test.assertEqual(JSON.stringify(info.tests.tests[0]),JSON.stringify({path:["folder","sub-folder"],name:"sub-sub-test.js"}));
   test.assertEqual(JSON.stringify(info.tests.tests[1]),JSON.stringify({path:["folder"],name:"sub-test.js"}));

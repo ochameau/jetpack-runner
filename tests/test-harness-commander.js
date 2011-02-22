@@ -94,7 +94,7 @@ exports.testRemoteLinkLaunch = function (test) {
   var p = harness.launchMain({
     packages: {"api-utils":apiutils,"package-test":package}, 
     package: package,
-    binary: require("moz-bin-search").getCurrentProcessBinary(),
+    binary: require("moz-bin-search").getBestBinary(),
     stdout: function(data) {
       if (data.indexOf("package-test:main.js OK")==0) {
         test.pass("Got dump from extension in stdout");
@@ -138,7 +138,7 @@ exports.testRemoteXPILaunch = function (test) {
     'user_pref("browser.dom.window.dump.enabled", true);');
   
   let p = require("moz-launcher").launch({
-    binary: require("moz-bin-search").getCurrentProcessBinary(),
+    binary: require("moz-bin-search").getBestBinary(),
     args: ["-profile", profile],
     stdout: function (data) {
       if (data.indexOf("package-test:main.js OK")==0) {
@@ -208,7 +208,7 @@ exports.testRemoteLaunchAsApplication = function (test) {
   console.log(applicationIniPath);
   
   let p = require("moz-launcher").launch({
-    binary: require("moz-bin-search").getCurrentProcessBinary(),
+    binary: require("moz-bin-search").getBestBinary(),
     args: ["-app", applicationIniPath, "-profile", profile, ],
     stdout: function (data) {
       if (data.indexOf("package-test:main.js OK")==0) {

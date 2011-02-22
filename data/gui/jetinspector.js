@@ -33,8 +33,10 @@ function loadBinaries() {
     bins.unshift(binaryPath);
   for(var i=0; i<bins.length; i++) {
     var bin = bins[i];
-    var info = mbs.getInfo(bin);
-    $("#binary").append('<option value="'+i+'"'+(bin==binaryPath?' selected="true"':'')+'>'+info.name+' '+info.version+' - '+bin+'</option>');
+    try {
+      var info = mbs.getInfo(bin);
+      $("#binary").append('<option value="'+i+'"'+(bin==binaryPath?' selected="true"':'')+'>'+info.name+' '+info.version+' - '+bin+'</option>');
+    } catch(e) {}
   }
   $("#binary").change(function () {
     var i = parseInt($(this).val());

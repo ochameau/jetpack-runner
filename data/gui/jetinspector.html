@@ -1,9 +1,9 @@
 <html>
 <head><title>Jetpack runner</title></head>
 <body>
-<script src="jquery-1.4.3.min.js"></script>
-<script src="jetinspector.js"></script>
-<link rel="stylesheet" type="text/css" href="jetinspector.css" />
+<script src="jetrunner://gui/jquery-1.4.3.min.js"></script>
+<script src="jetrunner://gui/jetinspector.js"></script>
+<link rel="stylesheet" type="text/css" href="jetrunner://gui/jetinspector.css" />
 
 <div id="binaries">
   Mozilla binary used: 
@@ -16,9 +16,16 @@
 <div id="sdk-selection" style="display: none">
   <select id="sdk"></select>
   <button onclick="downdloadAndUseSDK()">Download and use</button>
+  <div id="sdk-loading" style="display: none; font-weight: bold;">Downloading and extracting SDK</div>
 </div>
 
-<div id="packages-box">
+<div id="packages-path">
+  <h1>Include Paths:</h1>
+  <ul id="packages-path-list"></ul>
+  <button onclick="addIncludePath()">Add include</button>
+</div>
+
+<div id="packages-box" style="display: none">
   <h1>Packages:</h1>
   <ul id="packages-list"></ul>
 </div>

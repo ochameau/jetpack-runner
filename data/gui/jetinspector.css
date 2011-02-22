@@ -13,6 +13,14 @@ li:hover {
   text-decoration: underline;
 }
 
+#packages-path h1 {
+  margin-bottom: 0;
+}
+#packages-path textarea {
+  height: 3em;
+  width: 100%;
+}
+
 #packages-box {
   float: left;
   width: 200px;
@@ -36,4 +44,6 @@ li:hover {
   float: left;
   width: 50%;
 }
-
+#package-tests {
+  margin-left: 50%;
+}

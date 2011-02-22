@@ -12,6 +12,7 @@ var packagesPath = "";//path.join(process.cwd(), "..");
 
 var currentPackage = null;
 var sdkVersions = null;
+var gPackages = null;
 
 function loadSettings() {
   $("#run_as_application").attr("checked",!!prefs.get("run-as-app"));
@@ -41,25 +42,58 @@ function loadBinaries() {
   });
 }
 
+function addIncludePath(includePath) {
+  var path = selectFolder("Package(s) folder");
+  if (path) {
+    registerIncludePath(path);
+  }
+}
+
+function registerIncludePath(includePath) {
+  var previous = prefs.get("include-paths");
+  if (!previous || previous.indexOf(includePath)==-1)
+    prefs.set("include-paths", (previous?previous+'\n':'')+includePath);
+  loadPackagesList();
+}
+
 function downdloadAndUseSDK() {
   var i = $("#sdk").val();
   var sdk = sdkVersions[i];
+  prefs.set("sdk-version", sdk.version);
   
+  var loading = $("#sdk-loading");
+  loading.show();
   require("online-sdk").download(sdk, function (dir) {
-    packagesPath = dir;
-    loadPackagesList();
+    loading.hide();
+    registerIncludePath(dir);
   });
 }
 
 function loadPackagesList() {
-  var packages = null;
-  if (packagesPath)
-    packages = require("packages-inspector").getPackages(packagesPath);
+  gPackages = null;
+  var packagesPaths = prefs.get("include-paths");
+  if (packagesPaths) {
+    packagesPaths = packagesPaths.split('\n');
+    var list = $("#packages-path-list");
+    list.empty();
+    for(var i=0; i<packagesPaths.length; i++) {
+      list.append("<li>"+packagesPaths[i]+"</li>");
+      gPackages = require("packages-inspector").getPackages(packagesPaths[i], gPackages);
+    }
+  }
   var domTarget = $("#packages-list");
+  domTarget.empty();
+  
+  var list = [];
+  for(var i in gPackages) {
+    var p = gPackages[i];
+    list.push(i);
+  }
+  list.sort();
   
   var count = 0;
-  for(var i in packages) {
-    var p = packages[i];
+  for(var i=0; i<list.length; i++) {
+    var p = gPackages[list[i]];
     var elt = $("<li></li>");
     elt.text(p.name);
     (function (elt,p) {
@@ -78,14 +112,17 @@ function loadPackagesList() {
   if (count==0) {
     require("online-sdk").getAvailableVersions(function (err, list) {
       sdkVersions = list;
+      var currentVersion = prefs.get("sdk-version");
       for(var i=0; i<list.length; i++) {
-        $("#sdk").append('<option value="'+i+'" '+(i==list.length-1?'selected="true"':'')+'>'+list[i].version+'</option>');
+        var selected = (!currentVersion && i==list.length-1) || 
+          (currentVersion && list[i].version==currentVersion);
+        $("#sdk").append('<option value="'+i+'" '+(selected?'selected="true"':'')+'>'+list[i].version+'</option>');
       }
     });
     $("#sdk-selection").show();
-    domTarget.hide();
+    $("#packages-box").hide();
   } else {
-    domTarget.show();
+    $("#packages-box").show();
   }
 }
 
@@ -132,11 +169,10 @@ function openPackage(package) {
 }
 
 function launch(package, dirType, file) {
-  var packages = require("packages-inspector").getPackages(packagesPath);
   
   var options = {
     binary: prefs.get("binary-path"),
-    packages: packages, 
+    packages: gPackages, 
     runAsApp: prefs.get("run-as-app"),
     package: package,
   };
@@ -176,8 +212,19 @@ function selectFile(title, filename, ext) {
     return fp.file.path;
   }
   return null;
-
 }
+function selectFolder(title) {
+  var fp = Components.classes["@mozilla.org/filepicker;1"]
+               .createInstance(nsIFilePicker);
+  fp.init(window, title, nsIFilePicker.modeGetFolder);
+  
+  var rv = fp.show();
+  if (rv == nsIFilePicker.returnOK) {
+    return fp.file.path;
+  }
+  return null;
+}
+
 function GetXPI() {
   var file = selectFile(
     "XPI file", 
@@ -186,8 +233,8 @@ function GetXPI() {
     "xpi");
   if (!file)
     return;
-  var packages = require("packages-inspector").getPackages(packagesPath);
-  harnessCommander.buildXPI(packages, currentPackage, file);
+  
+  harnessCommander.buildXPI(gPackages, currentPackage, file);
 }
 
 function GetApp() {
@@ -198,8 +245,8 @@ function GetApp() {
     "zip");
   if (!file)
     return;
-  var packages = require("packages-inspector").getPackages(packagesPath);
-  harnessCommander.buildStandaloneApplication(packages, currentPackage, file);
+  
+  harnessCommander.buildStandaloneApplication(gPackages, currentPackage, file);
 }
 
 window.addEventListener("load",function () {
@@ -211,5 +258,3 @@ window.addEventListener("load",function () {
     Components.utils.reportError("load ex: "+e+" - "+e.stack);
   }
 },false);
-
-

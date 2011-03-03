@@ -1,15 +1,15 @@
 h1 {
-  font-size: 14px;
+  font-size: 18px;
 }
 ul {
   margin: 0;
   padding-left: 10px;
 }
-li {
+a, li {
   list-style:none;
   cursor: pointer;
 }
-li:hover {
+a:hover, li:hover {
   text-decoration: underline;
 }
 
@@ -33,8 +33,9 @@ li:hover {
 #package-description li {
   padding-left: 10px;
 }
-#package-name {
-  font-size: 18px;
+#package-actions {
+  margin-bottom: 20px;
+  text-align: center;
 }
 .package-dir-name {
   font-weight: bold;

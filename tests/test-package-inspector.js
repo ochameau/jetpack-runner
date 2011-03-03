@@ -12,7 +12,7 @@ function readManifest(repoName, packageName) {
 
 exports.testGetPackages = function (test) {
   let packages = pi.getPackages(getDataFilePath("test-pi/packages"));
-  packages = pi.getPackages(getDataFilePath("test-pi/another-packages"), packages);
+  packages = pi.getPackages(getDataFilePath("test-pi/another-packages/my-other-package"), packages);
   
   let list = [];
   for(var name in packages) {

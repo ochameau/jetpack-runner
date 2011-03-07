@@ -6,7 +6,7 @@ function require(module) {
 var prefs = require("preferences-service");
 var path = require("path");
 var process = require("process");
-var harnessCommander = require("harness-commander");
+var runner = require("addon-runner");
 
 var packagesPath = "";//path.join(process.cwd(), "..");
 
@@ -53,8 +53,23 @@ function addIncludePath(includePath) {
 
 function registerIncludePath(includePath) {
   var previous = prefs.get("include-paths");
-  if (!previous || previous.indexOf(includePath)==-1)
+  if (!previous || previous.split('\n').indexOf(includePath)==-1) {
+    try {
+      var count = 0;
+      for(var i in gPackages)
+        count--;
+      var packages = require("packages-inspector").getPackages(includePath, gPackages);
+      for(var i in packages)
+        count ++;
+      if (count <= 0) 
+        return alert("Unable to found a package in this include path");
+    } catch(e) {
+      return alert("Error while adding this include path : \n"+e);
+    }
     prefs.set("include-paths", (previous?previous+'\n':'')+includePath);
+  } else {
+    return alert("This package path is already registered");
+  }
   loadPackagesList();
 }
 
@@ -182,11 +197,11 @@ function launch(package, dirType, file) {
     
     if (file)
       options.testName = file.name;
-    harnessCommander.launchTest(options);
+    runner.launchTest(options);
     
   } else if (dirType=="libs") {
     
-    harnessCommander.launchMain(options);
+    runner.launchMain(options);
     
   }
   
@@ -236,7 +251,7 @@ function GetXPI() {
   if (!file)
     return;
   
-  harnessCommander.buildXPI(gPackages, currentPackage, file);
+  require("xpi-builder").build(gPackages, currentPackage, file);
 }
 
 function GetApp() {
@@ -248,7 +263,7 @@ function GetApp() {
   if (!file)
     return;
   
-  harnessCommander.buildStandaloneApplication(gPackages, currentPackage, file);
+  require("application-builder").build(gPackages, currentPackage, file);
 }
 
 window.addEventListener("load",function () {

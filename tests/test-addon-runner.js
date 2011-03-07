@@ -1,10 +1,14 @@
-const harness = require("harness-commander");
+const { Cc, Ci, Cu } = require("chrome");
+
+const runner = require("addon-runner");
+
 const self = require("self");
 const path = require("path");
 const fs = require("fs");
-const { Cc, Ci, Cu } = require("chrome");
 const process = require("process");
+
 const subprocess = require("subprocess");
+
 const zip = require("zip");
 
 const AddonManager = Cu.import("resource://gre/modules/AddonManager.jsm").AddonManager;
@@ -16,26 +20,25 @@ const xpiPath = getDataFilePath("test-harness/test.xpi");
 
 let options = null;
 
-require("unload").when(function () {
-  fs.unlinkSync(xpiPath);  
-});
-
-exports.testXPI = function (test) {
+exports.testBuildXPI = function (test) {
   let apiutilsPackagePath = path.join(require("url").toFilename(self.data.url()),"..","..","api-utils");
   let apiutils = require("packages-inspector").getPackage(apiutilsPackagePath);
   
   let packagePath = getDataFilePath("test-harness/package/");
-  let package = require("packages-inspector").getPackage(packagePath);
+  let package = require("packages-inspector").getPackage(packagePath);  
+  let packages = {"api-utils" : apiutils, "package-test" : package};
   
+  options = require("xpi-builder").build(packages, package, xpiPath);
   
-  options = harness.buildXPI({"api-utils":apiutils,"package-test":package}, package, xpiPath);
-  
+  require("unload").when(function () {
+    fs.unlinkSync(xpiPath);  
+  });
   //test.assertEqual(fs.statSync(xpiPath).size, 138821, "xpi file size is the expected one");
   test.pass("XPI built");
 }
 
 
-exports.testLocalLaunch = function (test) {
+exports.testCurrentProcessInstall = function (test) {
   // Remove HARNESS_OPTIONS or it will be used by harness.js:503->getDefaults()
   let environ = Cc["@mozilla.org/process/environment;1"]
                   .getService(Ci.nsIEnvironment);
@@ -90,9 +93,10 @@ exports.testRemoteLinkLaunch = function (test) {
   
   let packagePath = getDataFilePath("test-harness/package/");
   let package = require("packages-inspector").getPackage(packagePath);
+  let packages = {"api-utils" : apiutils, "package-test" : package};
   
-  var p = harness.launchMain({
-    packages: {"api-utils":apiutils,"package-test":package}, 
+  let p = runner.launchMain({
+    packages: packages, 
     package: package,
     binary: require("moz-bin-search").getBestBinary(),
     stdout: function(data) {
@@ -172,8 +176,9 @@ exports.testRemoteLaunchAsApplication = function (test) {
   
   let packagePath = getDataFilePath("test-harness/package/");
   let package = require("packages-inspector").getPackage(packagePath);
+  let packages = {"api-utils" : apiutils, "package-test" : package};
   
-  options = harness.buildStandaloneApplication({"api-utils":apiutils,"package-test":package}, package, applicationZipPath);
+  options = require("application-builder").build(packages, package, applicationZipPath);
   
   require("unload").when(function () {
     fs.unlinkSync(applicationZipPath);
@@ -182,7 +187,7 @@ exports.testRemoteLaunchAsApplication = function (test) {
   
   test.waitUntilDone(10000);
   
-  // Remove HARNESS_OPTIONS or it will be used by harness.js:503->getDefaults()
+  // Remove HARNESS_OPTIONS or it will be used by runner.js:503->getDefaults()
   let environ = Cc["@mozilla.org/process/environment;1"]
                   .getService(Ci.nsIEnvironment);
   environ.set("HARNESS_OPTIONS", "");
@@ -204,8 +209,6 @@ exports.testRemoteLaunchAsApplication = function (test) {
   } catch(e) {}
   let userpref = path.join(profile, "user.js");
   fs.writeFileSync(userpref, 'user_pref("browser.dom.window.dump.enabled", true);');
-  
-  console.log(applicationIniPath);
   
   let p = require("moz-launcher").launch({
     binary: require("moz-bin-search").getBestBinary(),

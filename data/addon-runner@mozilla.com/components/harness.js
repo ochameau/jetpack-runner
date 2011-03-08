@@ -526,9 +526,19 @@ function getDefaults(rootFileSpec) {
     defaultLogError(e);
     throw e;
   }
-
+  
   var onQuit = function() {};
-  var doDump = dump;
+  
+  // For some unknown reasons, global dump doesn't work there
+  // so use hidden window's one instead
+  var hiddenWindow = null;
+  var doDump = function (msg) {
+    if (!hiddenWindow)
+      hiddenWindow = Cc["@mozilla.org/appshell/appShellService;1"]
+        .getService(Ci.nsIAppShellService)
+        .hiddenDOMWindow;
+    hiddenWindow.dump(msg);
+  };
 
   if ('resultFile' in options)
     onQuit = buildDevQuit(options, print);

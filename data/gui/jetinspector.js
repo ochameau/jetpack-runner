@@ -15,32 +15,91 @@ var sdkVersions = null;
 var gPackages = null;
 
 function loadSettings() {
-  $("#run_as_application").attr("checked",!!prefs.get("run-as-app"));
-  $("#run_as_application").change(function () {
-    prefs.set("run-as-app",$(this).is(":checked"));
+  var input = $("#run-as-app");
+  input.attr("checked", !!prefs.get("run-as-app"));
+  input.change(function () {
+    prefs.set("run-as-app", $(this).is(":checked"));
   });
 }
 
-function loadBinaries() {
+function toggleGeneralOptions() {
+  var options = $("#options");
+  options.toggle();
+  $("#title").toggle();
+  if (options.is(':visible')) {
+    initTargetPlatformBinary();
+  }
+}
+
+var optionsInited = false;
+function initTargetPlatformBinary() {
+  if (optionsInited)
+    return;
+  optionsInited = true;
+  var runWithin = $('#run-within');
+  var runWithinInput = $('#run-within input');
+  function updateWith(doRunWithin) {
+    runWithinInput.attr("checked", doRunWithin);
+    if (doRunWithin) {
+      $("#run-another").hide();
+    } else {
+      initBinariesList();
+      $("#run-another").show();
+    }
+  }
+  runWithinInput.change(function () {
+    var newValue = runWithinInput.is(":checked");
+    prefs.set("run-within", newValue);
+    updateWith(newValue);
+  });
+  $('#run-within span').click(function (event) {
+    var newValue = !runWithinInput.is(":checked");
+    runWithinInput.attr("checked", newValue);
+    prefs.set("run-within", newValue);
+    updateWith(newValue);
+  });
+  
+  if (!prefs.has("run-within")) {
+    prefs.set("run-within", true);
+    updateWith(true);
+  } else {
+    updateWith(prefs.get("run-within"));
+  }
+}
+
+function initBinariesList() {
+  var selectNode = $("#run-another select");
+  
+  // Check if binaries list is already built
+  if (selectNode.children().length>0)
+    return;
+  
   var mbs = require("moz-bin-search");
   var bins = mbs.findBinaries();
   var binaryPath = prefs.get("binary-path");
+  
+  // Select first binary as default one
   if (!binaryPath || !path.existsSync(binaryPath)) {
     binaryPath = bins[0];
     prefs.set("binary-path",binaryPath);
   }
   if (bins.indexOf(binaryPath)==-1)
     bins.unshift(binaryPath);
+  
+  // Build the list
   for(var i=0; i<bins.length; i++) {
     var bin = bins[i];
     try {
+      // getInfo can throw easily on linux
       var info = mbs.getInfo(bin);
-      $("#binary").append('<option value="'+i+'"'+(bin==binaryPath?' selected="true"':'')+'>'+info.name+' '+info.version+' - '+bin+'</option>');
+      selectNode.append('<option value="'+i+'"'+(bin==binaryPath?' selected="true"':'')+'>'+info.name+' '+info.version+' - '+bin+'</option>');
     } catch(e) {}
   }
-  $("#binary").change(function () {
+  
+  // Watch for change
+  selectNode.change(function () {
     var i = parseInt($(this).val());
-    prefs.set("binary-path",bins[i]);
+    prefs.set("binary-path", bins[i]);
   });
 }
 
@@ -86,6 +145,32 @@ function downdloadAndUseSDK() {
   });
 }
 
+function togglePackagesOptions() {
+  var options = $("#packages-options");
+  options.toggle();
+  if (options.is(':visible')) {
+    initSdkVersions();
+  }
+}
+
+function initSdkVersions() {
+  var domTarget = $("#sdk");
+  if (domTarget.children().length > 0)
+    return;
+  var currentVersion = prefs.get("sdk-version");
+  $("#current-sdk-version").text(currentVersion ? currentVersion : "Unknown");
+  require("online-sdk").getAvailableVersions(function (err, list) {
+    sdkVersions = list;
+    
+    for(var i=0; i<list.length; i++) {
+      var selected = (!currentVersion && i==list.length-1) || 
+        (currentVersion && list[i].version==currentVersion);
+      domTarget.append('<option value="'+i+'" '+(selected?'selected="true"':'')+'>'+list[i].version+'</option>');
+    }
+  });
+}
+
+
 function loadPackagesList() {
   gPackages = null;
   var packagesPaths = prefs.get("include-paths");
@@ -94,8 +179,9 @@ function loadPackagesList() {
     var list = $("#packages-path-list");
     list.empty();
     for(var i=0; i<packagesPaths.length; i++) {
-      list.append("<li>"+packagesPaths[i]+"</li>");
-      gPackages = require("packages-inspector").getPackages(packagesPaths[i], gPackages);
+      var pPath = packagesPaths[i];
+      list.append('<li title="'+pPath+'">.../'+pPath.split(/\/|\\/).slice(-3).join('/')+'</li>');
+      gPackages = require("packages-inspector").getPackages(pPath, gPackages);
     }
   }
   var domTarget = $("#packages-list");
@@ -112,6 +198,7 @@ function loadPackagesList() {
   for(var i=0; i<list.length; i++) {
     var p = gPackages[list[i]];
     var elt = $("<li></li>");
+    elt.addClass("link");
     elt.text(p.name);
     (function (elt,p) {
       elt.click(function () {
@@ -127,19 +214,10 @@ function loadPackagesList() {
   }
   
   if (count==0) {
-    require("online-sdk").getAvailableVersions(function (err, list) {
-      sdkVersions = list;
-      var currentVersion = prefs.get("sdk-version");
-      for(var i=0; i<list.length; i++) {
-        var selected = (!currentVersion && i==list.length-1) || 
-          (currentVersion && list[i].version==currentVersion);
-        $("#sdk").append('<option value="'+i+'" '+(selected?'selected="true"':'')+'>'+list[i].version+'</option>');
-      }
-    });
+    
     $("#sdk-selection").show();
-    $("#packages-box").hide();
-  } else {
-    $("#packages-box").show();
+    
+    domTarget.append("<li>No packages</li>");
   }
 }
 
@@ -164,6 +242,7 @@ function openPackage(package) {
         var li = $("<li></li>");
         li.text(file.path.concat([file.name]).join("/"));
         if (dirType=="tests") {
+          li.addClass("link");
           (function (dir,file) {
             li.click(function () {
               try {
@@ -193,6 +272,27 @@ function launch(package, dirType, file) {
     runAsApp: prefs.get("run-as-app"),
     package: package,
   };
+  
+  $("#run-panel").show();
+  if (dirType == "tests") {
+    if (file)
+      $("#report-title").text("Running test "+package.name+", "+file.name+":");
+    else
+      $("#report-title").text("Running all tests from "+package.name+":");
+  }
+  else {
+    $("#report-title").text("Running "+package.name+":");
+  }
+  
+  var report = $("#console-report");
+  report.empty();
+  options.stdout = function (msg) {
+    report.append(msg+"<br/>");
+  }
+  options.stderr = function (msg) {
+    report.append(msg+"<br/>");
+  }
+  
   if (dirType=="tests") {
     
     if (file)
@@ -204,6 +304,8 @@ function launch(package, dirType, file) {
     runner.launchMain(options);
     
   }
+  
+  
   
 }
 
@@ -268,7 +370,6 @@ function GetApp() {
 
 window.addEventListener("load",function () {
   try {
-    loadBinaries();
     loadSettings();
     loadPackagesList();
   } catch(e) {

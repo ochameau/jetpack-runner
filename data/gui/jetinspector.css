@@ -1,16 +1,94 @@
-h1 {
-  font-size: 18px;
+body {
+  margin: 0; padding: 0;
+}
+
+/* Global rules */
+h2, h3 {
+  margin:0;
+}
+h3 {
+  font-size: 1em;
 }
 ul {
   margin: 0;
+  padding: 0;
   padding-left: 10px;
 }
-a, li {
+li {
+  list-style:none;
+}
+a, li.link {
   list-style:none;
   cursor: pointer;
 }
-a:hover, li:hover {
+a:hover, li.link:hover {
   text-decoration: underline;
+}
+
+/* Header block */
+#header {
+  background-color: #bad2ea;
+  border-bottom: 2px solid #a0a0a0;
+  position: relative;
+}
+
+#title {
+  line-height: 2em;
+  margin: 0;
+  margin-left: 2em;
+}
+
+#options {
+  display: none;
+  padding: 1em;
+}
+#general-options-button {
+  position: absolute;
+  right: 1em;
+  top: 1.5em;
+}
+#target-platform-binary {
+  -moz-user-select: none;
+  margin: auto;
+  padding: 0.5em;
+}
+#run-within {
+  cursor: pointer;
+}
+#run-another {
+  display: none;
+  margin-left: 23px;
+}
+#run-another select {
+  font-size: 12px;
+}
+
+#run-as-app {
+  margin-left: 1em;
+}
+
+/* Packages block */
+#packages-box {
+  margin: -2px 0.5em 0.5em 0;
+  padding: 1em;
+  background-color: #bad2ea;
+  border: 2px solid #a0a0a0;
+  border-top: 0; border-left: 0;
+  float: left;
+  min-width: 180px;
+  position: relative;
+}
+
+#packages-options {
+  display: none;
+  padding: 0.5em;
+  margin-bottom: 0.5em;
+}
+
+#packages-options-button {
+  position: absolute;
+  right: 1em;
+  top: 1.4em;
 }
 
 #packages-path h1 {
@@ -21,14 +99,12 @@ a:hover, li:hover {
   width: 100%;
 }
 
-#packages-box {
-  float: left;
-  width: 200px;
-}
+
+
+/* Select Package details block */
 
 #package-description {
-  /*display:none;*/
-  margin-left: 200px;
+  margin: 0.5em;
 }
 #package-description li {
   padding-left: 10px;
@@ -48,3 +124,26 @@ a:hover, li:hover {
 #package-tests {
   margin-left: 50%;
 }
+
+
+/* Run panel block */
+
+#run-panel {
+  display: none;
+  clear: both;
+  margin: 0.5em;
+  padding: 0.3em;
+  border: 2px solid #a0a0a0;
+  background: #e0e0e0;
+  
+}
+
+#report-title {
+  font-weight: bold;
+  margin-bottom: 0.3em;
+}
+#console-report {
+  font-family: Courier New;
+  font-size: 12px;
+}
+

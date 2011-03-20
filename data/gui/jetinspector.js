@@ -1,16 +1,18 @@
 function require(module) {
   return Components.classes[
-    "@mozilla.org/harness-service;1?id=jid0-k60wfE2Xuwso9RsQpqdbOXw8ZWI"].
+    "@mozilla.org/harness-service;1?id=jetpack-runner"].
     getService().wrappedJSObject.loader.require(module);
 }
 var prefs = require("preferences-service");
 var path = require("path");
+var fs = require("fs");
 var process = require("process");
 var runner = require("addon-runner");
 
 var packagesPath = "";//path.join(process.cwd(), "..");
 
 var currentPackage = null;
+var hasMain = false;
 var sdkVersions = null;
 var gPackages = null;
 
@@ -154,11 +156,12 @@ function togglePackagesOptions() {
 }
 
 function initSdkVersions() {
+  var currentVersion = prefs.get("sdk-version");
+  $("#current-sdk-version").text(currentVersion ? currentVersion : "Unknown");
+  
   var domTarget = $("#sdk");
   if (domTarget.children().length > 0)
     return;
-  var currentVersion = prefs.get("sdk-version");
-  $("#current-sdk-version").text(currentVersion ? currentVersion : "Unknown");
   require("online-sdk").getAvailableVersions(function (err, list) {
     sdkVersions = list;
     
@@ -182,6 +185,11 @@ function loadPackagesList() {
       var pPath = packagesPaths[i];
       list.append('<li title="'+pPath+'">.../'+pPath.split(/\/|\\/).slice(-3).join('/')+'</li>');
       gPackages = require("packages-inspector").getPackages(pPath, gPackages);
+    }
+    
+    if (gPackages["addon-kit"] && !prefs.get("sdk-version") && gPackages["addon-kit"].version) {
+      prefs.set("sdk-version", gPackages["addon-kit"].version);
+      initSdkVersions();
     }
   }
   var domTarget = $("#packages-list");
@@ -223,15 +231,14 @@ function loadPackagesList() {
 
 function openPackage(package) {
   currentPackage = package;
+  hasMain = false;
   $("#package-description").show();
   $("#package-name").text("Package: "+package.name);
   
   var extra = require("packages-inspector").getExtraInfo(package);
-  $("#package-libs").html("");
-  $("#package-tests").html("");
   
   function fillListWithFiles(ul, filesByDir, dirType) {
-    
+    ul.html("");
     for(var dir in filesByDir) {
       //var topLi=$("<li></li>");
       var subUl = $("<ul></ul>");
@@ -240,6 +247,8 @@ function openPackage(package) {
       subUl.append(dirName);
       for each(var file in filesByDir[dir]) {
         var li = $("<li></li>");
+        if (file.name == "main.js" && dirType == "libs")
+          hasMain = true;
         li.text(file.path.concat([file.name]).join("/"));
         if (dirType=="tests") {
           li.addClass("link");
@@ -259,19 +268,12 @@ function openPackage(package) {
     }
     
   }
-  fillListWithFiles($("#package-libs"), extra.libs, "libs");
-  fillListWithFiles($("#package-tests"), extra.tests, "tests");
+  fillListWithFiles($("#package-libs-list"), extra.libs, "libs");
+  fillListWithFiles($("#package-tests-list"), extra.tests, "tests");
   
 }
 
 function launch(package, dirType, file) {
-  
-  var options = {
-    binary: prefs.get("binary-path"),
-    packages: gPackages, 
-    runAsApp: prefs.get("run-as-app"),
-    package: package,
-  };
   
   $("#run-panel").show();
   if (dirType == "tests") {
@@ -284,32 +286,100 @@ function launch(package, dirType, file) {
     $("#report-title").text("Running "+package.name+":");
   }
   
-  var report = $("#console-report");
-  report.empty();
-  options.stdout = function (msg) {
-    report.append(msg+"<br/>");
-  }
-  options.stderr = function (msg) {
-    report.append(msg+"<br/>");
-  }
-  
+  var addonOptions = null;
   if (dirType=="tests") {
     
-    if (file)
-      options.testName = file.name;
-    runner.launchTest(options);
+    addonOptions = require("addon-options").buildForTest({
+      packages: gPackages,
+      mainPackageName: package.name,
+      testName: file?file.name:null
+    });
+    // If there is no resultFile
+    // harness.js won't try to kill firefox at end of tests!
+    if (prefs.get("run-within")) {
+      addonOptions.noKillAtTestEnd = true;
+    }
     
   } else if (dirType=="libs") {
     
-    runner.launchMain(options);
+    addonOptions = require("addon-options").buildForRun({
+      packages: gPackages,
+      mainPackageName : package.name,
+    });
     
+  } else {
+    throw new Error("Unknown dirType: "+dirType);
   }
   
+  addonOptions.noDumpInJsConsole = true;
   
+  var tmpdir = require("temp").dir;
+  var xpiPath = null;
   
+  if (prefs.get("run-as-app")) {
+    xpiPath = path.join(tmpdir, addonOptions.jetpackID+".zip");
+    if (path.existsSync(xpiPath))
+      fs.unlinkSync(xpiPath);
+    addonOptions = require("application-builder").build(addonOptions, package, xpiPath, true);
+  } else {
+    xpiPath = path.join(tmpdir, addonOptions.jetpackID+".xpi");
+    if (path.existsSync(xpiPath))
+      fs.unlinkSync(xpiPath);
+    addonOptions = require("xpi-builder").build(addonOptions, package, xpiPath, true);
+  }
+  delete addonOptions.resultFile;
+  delete addonOptions.logFile;
+  
+  var report = $("#console-report");
+  report.empty();
+  
+  var p = null;
+  if (prefs.get("run-within"))
+    p = runner.runWithin({
+      xpiPath: xpiPath,
+      jetpackID: addonOptions.jetpackID,
+      
+      stdout : function (msg) {
+        report.append(msg+"<br/>");
+      },
+      stderr : function (msg) {
+        report.append(msg+"<br/>");
+      },
+      quit: function () {
+        if (path.existsSync(xpiPath))
+          fs.unlinkSync(xpiPath);
+        report.append("------<br/><hr/>");
+      }
+    });
+  else
+    p = runner.runRemote({
+      binary: prefs.get("binary-path"),
+      xpiPath: xpiPath,
+      xpiID: addonOptions.bundleID,
+      
+      runAsApp: prefs.get("run-as-app"),
+      
+      stdout : function (msg) {
+        report.append(msg+"<br/>");
+      },
+      stderr : function (msg) {
+        report.append(msg+"<br/>");
+      },
+      quit: function () {
+        if (path.existsSync(xpiPath))
+          fs.unlinkSync(xpiPath);
+        report.append("------<br/>");
+      }
+    });
+  setTimeout(function () {
+    //console.log("try to kill");
+    //p.kill();
+  }, 6000);
 }
 
 function Run() {
+  if (!hasMain)
+    return alert("You need a 'main.js' file in order to run an extension");
   launch(currentPackage, "libs");
 }
 
@@ -353,7 +423,12 @@ function GetXPI() {
   if (!file)
     return;
   
-  require("xpi-builder").build(gPackages, currentPackage, file);
+  var addonOptions = require("addon-options").buildForRun({
+      packages: gPackages,
+      mainPackageName : currentPackage.name,
+    });
+  
+  require("xpi-builder").build(addonOptions, currentPackage, file, false);
 }
 
 function GetApp() {

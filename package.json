@@ -7,6 +7,6 @@
         "addon-kit", "api-utils", "moz-js", "subprocess"
     ], 
     "main": "main", 
-    "id": "jid0-k60wfE2Xuwso9RsQpqdbOXw8ZWI", 
+    "id": "jetpack-runner", 
     "description": "Jetpack application/extension to run others :)"
 }

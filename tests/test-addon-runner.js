@@ -11,230 +11,136 @@ const subprocess = require("subprocess");
 
 const zip = require("zip");
 
-const AddonManager = Cu.import("resource://gre/modules/AddonManager.jsm").AddonManager;
-
 function getDataFilePath(file) {
-  return require("url").toFilename(self.data.url("tests/"+file));
+  let url = self.data.url("tests/"+file);
+  let file = require("url").toFilename(url);
+  return file;
 }
-const xpiPath = getDataFilePath("test-harness/test.xpi");
+
 
 let options = null;
+let mainPackage = null;
+let xpiPath = null;
 
-exports.testBuildXPI = function (test) {
+exports.prepateOptions = function (test) {
   let apiutilsPackagePath = path.join(require("url").toFilename(self.data.url()),"..","..","api-utils");
   let apiutils = require("packages-inspector").getPackage(apiutilsPackagePath);
   
   let packagePath = getDataFilePath("test-harness/package/");
-  let package = require("packages-inspector").getPackage(packagePath);  
-  let packages = {"api-utils" : apiutils, "package-test" : package};
+  mainPackage = require("packages-inspector").getPackage(packagePath);
+  let packages = {"api-utils" : apiutils, "package-test" : mainPackage};
   
-  options = require("xpi-builder").build(packages, package, xpiPath);
-  
-  require("unload").when(function () {
-    fs.unlinkSync(xpiPath);  
-  });
-  //test.assertEqual(fs.statSync(xpiPath).size, 138821, "xpi file size is the expected one");
-  test.pass("XPI built");
-}
-
-
-exports.testCurrentProcessInstall = function (test) {
-  // Remove HARNESS_OPTIONS or it will be used by harness.js:503->getDefaults()
-  let environ = Cc["@mozilla.org/process/environment;1"]
-                  .getService(Ci.nsIEnvironment);
-  environ.set("HARNESS_OPTIONS","");
-  
-  let file = Cc['@mozilla.org/file/local;1'].createInstance(Ci.nsILocalFile);
-  file.initWithPath(xpiPath);
-  
-  // Get a install object from our xpi
-  AddonManager.getInstallForFile(file, function(install) {
-    // Check meta data
-    test.assertEqual(install.state, AddonManager.STATE_DOWNLOADED);
-    test.assertEqual(install.type, "extension");
-    test.assertEqual(install.version, "0.1");
-    test.assertEqual(install.name, "package-test");
-    
-    // Watch for install event
-    AddonManager.addInstallListener({
-      onInstallEnded: function(aAddon, aStatus) {
-        test.assertEqual(aAddon, install, "install objects are equals");
-        gotInstalledEvent = true;
-      }
+  options = require("addon-options").buildForRun({
+      packages: packages,
+      mainPackageName : mainPackage.name,
     });
-    
-    // Watch for an event dispatched by our jetpack example
-    // which prove that the addon works!
-    let observerService = Cc["@mozilla.org/observer-service;1"]
-                              .getService(Ci.nsIObserverService);
-    let observer = {
-      observe: function(subject, topic, data) {
-        test.assertEqual(data, "ok");
-        observerService.removeObserver(observer, "package-test");
-        
-        test.done();
-      }
-    };
-    observerService.addObserver(observer, "package-test", false);
-    
-    // Launch addon installation!
-    install.install();
-  });
   
-  test.waitUntilDone();
+  let workdir = path.join(require("url").toFilename(require("self").data.url()), "..", "workdir");
+  xpiPath = path.join(workdir, "test.xpi");
+  if (path.existsSync(xpiPath))
+    fs.unlinkSync(xpiPath);
+  
+  test.pass("Options ready");
 }
 
-
-exports.testRemoteLinkLaunch = function (test) {
-  test.waitUntilDone(10000);
+function runRemoteAndCheck(test, xpiPath, addonID, runAsApp) {
+  test.waitUntilDone(100000);
   
-  let apiutilsPackagePath = path.join(require("url").toFilename(self.data.url()),"..","..","api-utils");
-  let apiutils = require("packages-inspector").getPackage(apiutilsPackagePath);
-  
-  let packagePath = getDataFilePath("test-harness/package/");
-  let package = require("packages-inspector").getPackage(packagePath);
-  let packages = {"api-utils" : apiutils, "package-test" : package};
-  
-  let p = runner.launchMain({
-    packages: packages, 
-    package: package,
+  let p = runner.runRemote({
     binary: require("moz-bin-search").getBestBinary(),
+    xpiPath: xpiPath,
+    xpiID: addonID,
+    
+    runAsApp: runAsApp,
+    
     stdout: function(data) {
       if (data.indexOf("package-test:main.js OK")==0) {
         test.pass("Got dump from extension in stdout");
         p.kill();
-      }
+      } else
+        console.log("Got data : "+data);
     },
     quit: function (data) {
+      console.log(">>>>>>>>>>>>>>>>>>>> QUIT REMOTE");
+      if (path.existsSync(xpiPath))
+        fs.unlinkSync(xpiPath);
       test.done();
     }
   });
+  
   require("unload").when(function () {
     p.kill();
   });
+  
 }
 
-exports.testRemoteXPILaunch = function (test) {
-  test.waitUntilDone(10000);
+function runWithinAndCheck(test, xpiPath, jetpackID) {
+  test.waitUntilDone(100000);
   
-  // Remove HARNESS_OPTIONS or it will be used by harness.js:503->getDefaults()
-  let environ = Cc["@mozilla.org/process/environment;1"]
-                  .getService(Ci.nsIEnvironment);
-  environ.set("HARNESS_OPTIONS", "");
-  
-  let profile = path.join(require("url").toFilename(self.data.url()),
-    "..", "workdir", "profile");
-  
-  let extensionFolder = path.join(profile, "extensions", options.bundleID);
-  // Create extension folder, in case it doesn't already exists
-  try {
-    fs.mkdir(path.join(profile, "extensions"));
-  } catch(e) {}
-    
-  // Extract xpi in extensions profile folder
-  let xpi = new zip.ZipReader(xpiPath);
-  xpi.extractAll(extensionFolder);
-  xpi.close();
-  
-  // Override some prefs by using user.js in profile directory
-  let userpref = path.join(profile, "user.js");
-  fs.writeFileSync(userpref, 'user_pref("browser.shell.checkDefaultBrowser", false);\n' +
-    'user_pref("browser.dom.window.dump.enabled", true);');
-  
-  let p = require("moz-launcher").launch({
+  let p = runner.runWithin({
     binary: require("moz-bin-search").getBestBinary(),
-    args: ["-profile", profile],
-    stdout: function (data) {
-      if (data.indexOf("package-test:main.js OK")==0) {
+    xpiPath: xpiPath,
+    jetpackID: jetpackID,
+    
+    stdout: function(data) {
+      if (data.indexOf("package-test:main.js OK")!=1) {
         test.pass("Got dump from extension in stdout");
         p.kill();
-      }
+      } else
+        console.log("Got data : "+data);
     },
-    stderr: function (data) {
-      
-    },
-    quit: function () {
-      test.pass("Extension seems to be working and firefox has been killed");
-      // Wait a litle bit before removing files
-      // because process may still block them
-      require("timer").setTimeout(function () {
-        require("rm-rec").rm(profile, function(err) {
-          test.pass("Profile cleaned");
-          test.done();
-        });
-      }, 1000);
+    quit: function (data) {
+      console.log(">>>>>>>>>>>>>>>>>>>> QUIT WITHIN");
+      if (path.existsSync(xpiPath))
+        fs.unlinkSync(xpiPath);
+      test.done();
     }
   });
-}
-
-
-exports.testRemoteLaunchAsApplication = function (test) {
-  const applicationZipPath = getDataFilePath("test-harness/application.zip");
-  
-  let apiutilsPackagePath = path.join(require("url").toFilename(self.data.url()),"..","..","api-utils");
-  let apiutils = require("packages-inspector").getPackage(apiutilsPackagePath);
-  
-  let packagePath = getDataFilePath("test-harness/package/");
-  let package = require("packages-inspector").getPackage(packagePath);
-  let packages = {"api-utils" : apiutils, "package-test" : package};
-  
-  options = require("application-builder").build(packages, package, applicationZipPath);
   
   require("unload").when(function () {
-    fs.unlinkSync(applicationZipPath);
+    p.kill();
   });
-  test.pass("Application built");
   
-  test.waitUntilDone(10000);
+}
+
+exports.testWithinLightXPI = function (test) {
   
-  // Remove HARNESS_OPTIONS or it will be used by runner.js:503->getDefaults()
-  let environ = Cc["@mozilla.org/process/environment;1"]
-                  .getService(Ci.nsIEnvironment);
-  environ.set("HARNESS_OPTIONS", "");
+  let newOptions = require("xpi-builder").build(options, mainPackage, xpiPath, true);
+  runWithinAndCheck(test, xpiPath, newOptions.jetpackID);
   
-  let workdir = path.join(require("url").toFilename(self.data.url()),
-    "..", "workdir");
-  let profile = path.join(workdir, "profile");
-  let applicationPath = path.join(workdir, "application");
-  let applicationIniPath = path.join(applicationPath, "application.ini");
+}
+
+exports.testWithinXPI = function (test) {
   
-  // Extract xpi in extensions profile folder
-  let xpi = new zip.ZipReader(applicationZipPath);
-  xpi.extractAll(applicationPath);
-  xpi.close();
+  let newOptions = require("xpi-builder").build(options, mainPackage, xpiPath);
+  runWithinAndCheck(test, xpiPath, newOptions.jetpackID);
   
-  // Override some prefs by using user.js in profile directory
-  try {
-    fs.mkdir(profile);
-  } catch(e) {}
-  let userpref = path.join(profile, "user.js");
-  fs.writeFileSync(userpref, 'user_pref("browser.dom.window.dump.enabled", true);');
+}
+
+exports.testRemoteLightXPI = function (test) {
   
-  let p = require("moz-launcher").launch({
-    binary: require("moz-bin-search").getBestBinary(),
-    args: ["-app", applicationIniPath, "-profile", profile, ],
-    stdout: function (data) {
-      if (data.indexOf("package-test:main.js OK")==0) {
-        test.pass("Got dump from extension in stdout");
-        p.kill();
-      }
-    },
-    stderr: function (data) {
-      
-    },
-    quit: function () {
-      test.pass("Extension seems to be working and firefox has been killed");
-      // Wait a litle bit before removing files
-      // because process may still block them
-      require("timer").setTimeout(function () {
-        require("rm-rec").rm(profile, function(err) {
-          test.pass("Profile cleaned");
-          require("rm-rec").rm(applicationPath, function(err) {
-            test.pass("Application cleaned");
-            test.done();
-          });
-        });
-      }, 1000);
-    }
-  });
+  let newOptions = require("xpi-builder").build(options, mainPackage, xpiPath, true);
+  runRemoteAndCheck(test, xpiPath, options.bundleID);
+  
+}
+
+exports.testRemoteXPI = function (test) {
+  
+  let newOptions = require("xpi-builder").build(options, mainPackage, xpiPath);
+  runRemoteAndCheck(test, xpiPath, newOptions.bundleID);
+  
+}
+
+exports.testRemoteLightApplication = function (test) {
+  
+  let newOptions = require("application-builder").build(options, mainPackage, xpiPath, true);
+  runRemoteAndCheck(test, xpiPath, newOptions.bundleID, true);
+  
+}
+
+exports.testRemoteApplication = function (test) {
+  
+  let newOptions = require("application-builder").build(options, mainPackage, xpiPath);
+  runRemoteAndCheck(test, xpiPath, newOptions.bundleID, true);
+  
 }

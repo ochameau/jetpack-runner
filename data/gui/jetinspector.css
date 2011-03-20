@@ -27,9 +27,10 @@ a:hover, li.link:hover {
 
 /* Header block */
 #header {
-  background-color: #bad2ea;
-  border-bottom: 2px solid #a0a0a0;
+  background-image: -moz-linear-gradient(270deg, rgb(90, 103, 118), rgb(78, 88, 97));
+  border-bottom: 2px solid #000;
   position: relative;
+  color: white;
 }
 
 #title {
@@ -71,8 +72,9 @@ a:hover, li.link:hover {
 #packages-box {
   margin: -2px 0.5em 0.5em 0;
   padding: 1em;
-  background-color: #bad2ea;
-  border: 2px solid #a0a0a0;
+  background-color: rgba(78, 88, 97, 1);
+  color: white;
+  border: 2px solid #000;
   border-top: 0; border-left: 0;
   float: left;
   min-width: 180px;
@@ -110,19 +112,48 @@ a:hover, li.link:hover {
   padding-left: 10px;
 }
 #package-actions {
-  margin-bottom: 20px;
-  text-align: center;
+  float: right;
 }
 .package-dir-name {
-  font-weight: bold;
+  font-size: 1em;
+  text-decoration: underline;
+}
+
+#directories {
+  -webkit-box-flex:3;
+  -moz-box-flex:3;
+  box-flex:3;
+  display: -webkit-box;
+  -webkit-box-orient: horizontal;
+  -webkit-box-direction : reverse;
+  display: -moz-box;
+  -moz-box-orient: horizontal;
+  -moz-box-direction : reverse;
+  display: box;
+  box-orient: horizontal;
+  box-direction : reverse;
+  width:  -moz-calc(100% - 250px);
+}
+
+#directories h3 {
+  text-decoration: underline;
+}
+#directories div {
+  text-align: center;
+}
+#directories ul {
+  text-align: left;
+}
+
+#package-libs, #package-tests {
+  -webkit-box-flex:1;-moz-box-flex:1;box-flex:1;
 }
 
 #package-libs {
-  float: left;
-  width: 50%;
+  -webkit-box-ordinal-group:2;-moz-box-ordinal-group:2;box-ordinal-group:2;
 }
 #package-tests {
-  margin-left: 50%;
+  -webkit-box-ordinal-group:1;-moz-box-ordinal-group:1;box-ordinal-group:1;
 }
 
 
@@ -133,9 +164,8 @@ a:hover, li.link:hover {
   clear: both;
   margin: 0.5em;
   padding: 0.3em;
-  border: 2px solid #a0a0a0;
-  background: #e0e0e0;
-  
+  border: 1px solid rgb(208, 213, 219);
+  background-image: -moz-linear-gradient(270deg, rgb(255, 255, 254), rgb(243, 245, 247));
 }
 
 #report-title {

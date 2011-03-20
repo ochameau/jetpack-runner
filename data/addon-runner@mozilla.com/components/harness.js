@@ -332,7 +332,9 @@ function buildHarnessService(rootFileSpec, dump, logError,
 
       isStarted = false;
       harnessService = null;
-
+      
+      obSvc.notifyObservers(null, "internal-quit-" + options.jetpackID, null);
+      
       obSvc.removeObserver(this, "quit-application-granted");
 
       lifeCycleObserver192.unload();
@@ -532,17 +534,28 @@ function getDefaults(rootFileSpec) {
   // For some unknown reasons, global dump doesn't work there
   // so use hidden window's one instead
   var hiddenWindow = null;
+  let observerService = Cc["@mozilla.org/observer-service;1"]
+                              .getService(Ci.nsIObserverService);
   var doDump = function (msg) {
     if (!hiddenWindow)
       hiddenWindow = Cc["@mozilla.org/appshell/appShellService;1"]
         .getService(Ci.nsIAppShellService)
         .hiddenDOMWindow;
     hiddenWindow.dump(msg);
+    observerService.notifyObservers(null, 
+      "internal-log-" + options.jetpackID, msg);
   };
-
+  
   if ('resultFile' in options)
     onQuit = buildDevQuit(options, print);
-  else
+  else if (!('noKillAtTestEnd' in options))
+    onQuit = function () {
+      var appStartup = Cc['@mozilla.org/toolkit/app-startup;1'].
+                       getService(Ci.nsIAppStartup);
+      appStartup.quit(Ci.nsIAppStartup.eAttemptQuit);
+    }
+  
+  if (!('resultFile' in options) && !('noDumpInJsConsole' in options))
     // If we're not being run by cfx or some other kind of tool that is
     // ensuring dump() calls are visible, we'll have to log to the
     // forsaken Error Console.

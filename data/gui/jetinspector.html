@@ -56,24 +56,34 @@
 </div>
 
 <div id="package-description" style="display: none">
-  <h1 id="package-name"></h1>
-  <div id="package-actions">
-    <a href="#" onclick="Run()">Run</a> - 
-    <a href="#" onclick="Test()">Execute all tests</a> - 
-    <a href="#" onclick="GetXPI()">Get XPI</a> - 
-    <a href="#" onclick="GetApp()">Get Application</a> 
+  <ul id="package-actions">
+    Download as:
+    <li><a href="#" onclick="GetXPI()">Firefox extension (.xpi)</a></li>
+    <li><a href="#" onclick="GetApp()">Xulrunner Application</a></li>
+  </ul>
+  <h2 id="package-name"></h1>
+  
+  <div id="directories">
+    <div id="package-libs">
+      <h3>Modules</h3>
+      <a id="package-install" href="#" onclick="Run()" title="You need a main.js file to run an extension!">Install'n run</a>
+      <div id="package-libs-list"></div>
+    </div>
+    
+    <div id="package-tests">
+      <h3>Unit tests</h3>
+      <a href="#" onclick="Test()">Execute all tests</a><br />
+      <div id="package-tests-list"></div>
+    </div>
+    
+    
   </div>
-  <div id="package-libs"></div>
-  <div id="package-tests"></div>
+  <div style="clear: both"></div>
 </div>
 
 <div id="run-panel">
-  <div id="report-title">
-    
-  </div>
-  <div id="console-report">
-    
-  </div>
+  <div id="report-title"></div>
+  <div id="console-report"></div>
 </div>
 
 </body>

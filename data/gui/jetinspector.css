@@ -1,5 +1,9 @@
 body {
   margin: 0; padding: 0;
+  cursor: default;
+}
+h1, h2, h3, h4 {
+  -moz-user-select: none;
 }
 
 /* Global rules */
@@ -49,7 +53,6 @@ a:hover, li.link:hover {
   top: 1.5em;
 }
 #target-platform-binary {
-  -moz-user-select: none;
   margin: auto;
   padding: 0.5em;
 }
@@ -175,5 +178,7 @@ a:hover, li.link:hover {
 #console-report {
   font-family: Courier New;
   font-size: 12px;
+  cursor: text;
 }
+
 

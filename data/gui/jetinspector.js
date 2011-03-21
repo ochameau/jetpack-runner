@@ -210,11 +210,7 @@ function loadPackagesList() {
     elt.text(p.name);
     (function (elt,p) {
       elt.click(function () {
-        try {
-          openPackage(p);
-        }catch(e){
-          Components.utils.reportError(e);
-        }
+        document.location = "jetpack:" + p.name;
       });
     })(elt,p);
     domTarget.append(elt);
@@ -254,11 +250,7 @@ function openPackage(package) {
           li.addClass("link");
           (function (dir,file) {
             li.click(function () {
-              try {
-                launch(package,dirType,file);
-              } catch(e) {
-                Components.utils.reportError(e+"\n"+e.stack);
-              }
+              document.location = "jetpack:" + package.name + ":" + file.name;
             });
           })(dir,file);
         }
@@ -273,12 +265,12 @@ function openPackage(package) {
   
 }
 
-function launch(package, dirType, file) {
+function launch(package, dirType, testFileName) {
   
   $("#run-panel").show();
   if (dirType == "tests") {
-    if (file)
-      $("#report-title").text("Running test "+package.name+", "+file.name+":");
+    if (testFileName)
+      $("#report-title").text("Running test "+package.name+", "+testFileName+":");
     else
       $("#report-title").text("Running all tests from "+package.name+":");
   }
@@ -292,8 +284,9 @@ function launch(package, dirType, file) {
     addonOptions = require("addon-options").buildForTest({
       packages: gPackages,
       mainPackageName: package.name,
-      testName: file?file.name:null
+      testName: testFileName?testFileName:null
     });
+    
     // If there is no resultFile
     // harness.js won't try to kill firefox at end of tests!
     if (prefs.get("run-within")) {
@@ -371,20 +364,19 @@ function launch(package, dirType, file) {
         report.append("------<br/>");
       }
     });
-  setTimeout(function () {
-    //console.log("try to kill");
-    //p.kill();
-  }, 6000);
+  
+  
+  
 }
 
 function Run() {
   if (!hasMain)
     return alert("You need a 'main.js' file in order to run an extension");
-  launch(currentPackage, "libs");
+  document.location.href = "jetpack:" + currentPackage.name + ":run";
 }
 
 function Test() {
-  launch(currentPackage, "tests");
+  document.location.href = "jetpack:" + currentPackage.name + ":test";
 }
 
 const nsIFilePicker = Components.interfaces.nsIFilePicker;
@@ -447,6 +439,35 @@ window.addEventListener("load",function () {
   try {
     loadSettings();
     loadPackagesList();
+    var args = document.location.href.replace(/:$/,"").split(":");
+    
+    // home
+    if (args.length >= 1) {
+      
+      
+    } 
+    
+    var p = null;
+    // Package
+    if (args.length >= 2) {
+      var packageName = args[1];
+      p = gPackages[packageName];
+      if (!p)
+        return alert("Unable to found package '"+packageName+"'");
+      openPackage(p);
+    }
+    
+    // Execution: test or run
+    if (args.length >= 3) {
+      var cmd = args[2];
+      if (cmd == "run")
+        launch(p, "libs");
+      else if (cmd == "test")
+        launch(p, "tests");
+      else
+        launch(p, "tests", cmd);
+    }
+    
   } catch(e) {
     Components.utils.reportError("load ex: "+e+" - "+e.stack);
   }

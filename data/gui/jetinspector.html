@@ -2,11 +2,15 @@
 <head>
   <title>Jetpack runner</title>
   <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+  <link type="text/css" href="css/ui-lightness/jquery-ui-1.8.11.custom.css" rel="stylesheet" />	
+  <script type="text/javascript" src="js/jquery-1.5.1.js"></script>
+  <script type="text/javascript" src="js/jquery-ui-1.8.11.custom.min.js"></script>
+  
+  <script src="jetinspector.js"></script>
 </head>
 <body>
-<script src="jetrunner://gui/jquery-1.4.3.min.js"></script>
-<script src="jetrunner://gui/jetinspector.js"></script>
-<link rel="stylesheet" type="text/css" href="jetrunner://gui/jetinspector.css" />
+
+<link rel="stylesheet" type="text/css" href="jetinspector.css" />
 
 <div id="header">
   <h1 id="title">
@@ -58,21 +62,21 @@
 <div id="package-description" style="display: none">
   <ul id="package-actions">
     Download as:
-    <li><a href="#" onclick="GetXPI()">Firefox extension (.xpi)</a></li>
-    <li><a href="#" onclick="GetApp()">Xulrunner Application</a></li>
+    <li><a onclick="GetXPI()">Firefox extension (.xpi)</a></li>
+    <li><a onclick="GetApp()">Xulrunner Application</a></li>
   </ul>
   <h2 id="package-name"></h1>
   
   <div id="directories">
     <div id="package-libs">
       <h3>Modules</h3>
-      <a id="package-install" href="#" onclick="Run()" title="You need a main.js file to run an extension!">Install'n run</a>
+      <a id="package-install" onclick="Run()" title="You need a main.js file to run an extension!">Install'n run</a>
       <div id="package-libs-list"></div>
     </div>
     
     <div id="package-tests">
       <h3>Unit tests</h3>
-      <a href="#" onclick="Test()">Execute all tests</a><br />
+      <a onclick="Test()">Execute all tests</a><br />
       <div id="package-tests-list"></div>
     </div>
     
@@ -83,8 +87,12 @@
 
 <div id="run-panel">
   <div id="report-title"></div>
-  <div id="console-report"></div>
+  <pre id="console-report"></pre>
 </div>
+
+<script>
+//document.body.innerHTML = document.location.href
+</script>
 
 </body>
 </html>

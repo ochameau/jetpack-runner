@@ -224,6 +224,8 @@ function buildHarnessService(rootFileSpec, dump, logError,
 
     getModuleInfo: function getModuleInfo(path) {
       var i = this.__packages[path];
+      if (!i)
+        throw new Error("Unable to found manifest for module : "+path);
       var info = { dependencies: i.requires,
                    needsChrome: i.chrome,
                    'e10s-adapter': i['e10s-adapter'],

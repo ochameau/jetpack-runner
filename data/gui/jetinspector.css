@@ -104,6 +104,16 @@ a:hover, li.link:hover {
   width: 100%;
 }
 
+#packages-list > li.current {
+  font-weight: bold;
+  background: white;
+  border-radius: 10px;
+  border: 1px solid gray;
+  padding-left: 10px;
+  margin-left: -10px;
+  line-height: 18px;
+  color: rgba(78, 88, 97, 1);
+}
 
 
 /* Select Package details block */
@@ -135,7 +145,7 @@ a:hover, li.link:hover {
   display: box;
   box-orient: horizontal;
   box-direction : reverse;
-  width:  -moz-calc(100% - 250px);
+  width:  -moz-calc(100% - 300px);
 }
 
 #directories h3 {
@@ -175,10 +185,26 @@ a:hover, li.link:hover {
   font-weight: bold;
   margin-bottom: 0.3em;
 }
+#run-state {
+  float: right;
+}
+#run-state-info {
+  color: #aaa;
+  font-weight: bold;
+}
+#run-kill {
+  font-weight: bold;
+  color: #aaa;
+}
+#run-kill.on {
+  color: rgb(200,100,0);
+}
+
 #console-report {
   font-family: Courier New;
   font-size: 12px;
   cursor: text;
+  white-space: pre-wrap;
 }
 
 

@@ -60,23 +60,25 @@
 </div>
 
 <div id="package-description" style="display: none">
-  <ul id="package-actions">
-    Download as:
-    <li><a onclick="GetXPI()">Firefox extension (.xpi)</a></li>
-    <li><a onclick="GetApp()">Xulrunner Application</a></li>
-  </ul>
-  <h2 id="package-name"></h1>
+  <div id="package-actions">
+    Download as: 
+    <a onclick="GetXPI()">Firefox extension (.xpi)</a> or 
+    <a onclick="GetApp()">Xulrunner Application</a>
+  </div>
+  <h2 id="package-name"></h2>
   
   <div id="directories">
     <div id="package-libs">
+      <a id="package-install" onclick="Run()" title="You need a main.js file to run an extension!">Run</a><br />
+      <br />
       <h3>Modules</h3>
-      <a id="package-install" onclick="Run()" title="You need a main.js file to run an extension!">Install'n run</a>
       <div id="package-libs-list"></div>
     </div>
     
     <div id="package-tests">
-      <h3>Unit tests</h3>
       <a onclick="Test()">Execute all tests</a><br />
+      <br />
+      <h3>Unit tests</h3>
       <div id="package-tests-list"></div>
     </div>
     
@@ -86,6 +88,10 @@
 </div>
 
 <div id="run-panel">
+  <div id="run-state">
+    <span id="run-state-info">loading</span> - 
+    <a id="run-kill" onclick="Kill()">Kill/unload</a>
+  </div>
   <div id="report-title"></div>
   <pre id="console-report"></pre>
 </div>

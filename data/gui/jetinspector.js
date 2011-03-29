@@ -1,3 +1,4 @@
+try {
 function require(module) {
   return Components.classes[
     "@mozilla.org/harness-service;1?id=jetpack-runner"].
@@ -9,12 +10,13 @@ var fs = require("fs");
 var process = require("process");
 var runner = require("addon-runner");
 
-var packagesPath = "";//path.join(process.cwd(), "..");
+var packagesPath = "";
 
 var currentPackage = null;
 var hasMain = false;
 var sdkVersions = null;
 var gPackages = null;
+var currentProcess = null;
 
 function loadSettings() {
   var input = $("#run-as-app");
@@ -61,12 +63,7 @@ function initTargetPlatformBinary() {
     updateWith(newValue);
   });
   
-  if (!prefs.has("run-within")) {
-    prefs.set("run-within", true);
-    updateWith(true);
-  } else {
-    updateWith(prefs.get("run-within"));
-  }
+  updateWith(prefs.get("run-within"));
 }
 
 function initBinariesList() {
@@ -135,15 +132,18 @@ function registerIncludePath(includePath) {
 }
 
 function downdloadAndUseSDK() {
+  var path = selectFolder("SDK folder");
+  if (!path) return;
+  
   var i = $("#sdk").val();
   var sdk = sdkVersions[i];
   prefs.set("sdk-version", sdk.version);
   
   var loading = $("#sdk-loading");
   loading.show();
-  require("online-sdk").download(sdk, function (dir) {
+  require("online-sdk").download(sdk, path, function () {
     loading.hide();
-    registerIncludePath(dir);
+    registerIncludePath(path);
   });
 }
 
@@ -207,6 +207,10 @@ function loadPackagesList() {
     var p = gPackages[list[i]];
     var elt = $("<li></li>");
     elt.addClass("link");
+    if (currentPackage && p.name == currentPackage.name)
+      elt.addClass("current");
+    else
+      elt.removeClass("current");
     elt.text(p.name);
     (function (elt,p) {
       elt.click(function () {
@@ -266,107 +270,118 @@ function openPackage(package) {
 }
 
 function launch(package, dirType, testFileName) {
-  
   $("#run-panel").show();
-  if (dirType == "tests") {
-    if (testFileName)
-      $("#report-title").text("Running test "+package.name+", "+testFileName+":");
-    else
-      $("#report-title").text("Running all tests from "+package.name+":");
-  }
-  else {
-    $("#report-title").text("Running "+package.name+":");
-  }
-  
-  var addonOptions = null;
-  if (dirType=="tests") {
-    
-    addonOptions = require("addon-options").buildForTest({
-      packages: gPackages,
-      mainPackageName: package.name,
-      testName: testFileName?testFileName:null
-    });
-    
-    // If there is no resultFile
-    // harness.js won't try to kill firefox at end of tests!
-    if (prefs.get("run-within")) {
-      addonOptions.noKillAtTestEnd = true;
-    }
-    
-  } else if (dirType=="libs") {
-    
-    addonOptions = require("addon-options").buildForRun({
-      packages: gPackages,
-      mainPackageName : package.name,
-    });
-    
-  } else {
-    throw new Error("Unknown dirType: "+dirType);
-  }
-  
-  addonOptions.noDumpInJsConsole = true;
-  
-  var tmpdir = require("temp").dir;
-  var xpiPath = null;
-  
-  if (prefs.get("run-as-app")) {
-    xpiPath = path.join(tmpdir, addonOptions.jetpackID+".zip");
-    if (path.existsSync(xpiPath))
-      fs.unlinkSync(xpiPath);
-    addonOptions = require("application-builder").build(addonOptions, package, xpiPath, true);
-  } else {
-    xpiPath = path.join(tmpdir, addonOptions.jetpackID+".xpi");
-    if (path.existsSync(xpiPath))
-      fs.unlinkSync(xpiPath);
-    addonOptions = require("xpi-builder").build(addonOptions, package, xpiPath, true);
-  }
-  delete addonOptions.resultFile;
-  delete addonOptions.logFile;
-  
   var report = $("#console-report");
   report.empty();
-  
-  var p = null;
-  if (prefs.get("run-within"))
-    p = runner.runWithin({
-      xpiPath: xpiPath,
-      jetpackID: addonOptions.jetpackID,
+  try {
+    
+    if (dirType == "tests") {
+      if (testFileName)
+        $("#report-title").text("Running test "+package.name+", "+testFileName+":");
+      else
+        $("#report-title").text("Running all tests from "+package.name+":");
+    }
+    else {
+      $("#report-title").text("Running "+package.name+":");
+    }
+    
+    if (currentProcess)
+      Kill();
+    
+    var addonOptions = null;
+    if (dirType=="tests") {
       
-      stdout : function (msg) {
-        report.append(msg+"<br/>");
-      },
-      stderr : function (msg) {
-        report.append(msg+"<br/>");
-      },
-      quit: function () {
-        if (path.existsSync(xpiPath))
-          fs.unlinkSync(xpiPath);
-        report.append("------<br/><hr/>");
+      addonOptions = require("addon-options").buildForTest({
+        packages: gPackages,
+        mainPackageName: package.name,
+        testName: testFileName?testFileName:null
+      });
+      
+      // If there is no resultFile
+      // harness.js won't try to kill firefox at end of tests!
+      if (prefs.get("run-within")) {
+        addonOptions.noKillAtTestEnd = true;
       }
-    });
-  else
-    p = runner.runRemote({
-      binary: prefs.get("binary-path"),
-      xpiPath: xpiPath,
-      xpiID: addonOptions.bundleID,
       
-      runAsApp: prefs.get("run-as-app"),
+    } else if (dirType=="libs") {
       
-      stdout : function (msg) {
-        report.append(msg+"<br/>");
-      },
-      stderr : function (msg) {
-        report.append(msg+"<br/>");
-      },
-      quit: function () {
-        if (path.existsSync(xpiPath))
-          fs.unlinkSync(xpiPath);
-        report.append("------<br/>");
-      }
-    });
-  
-  
-  
+      addonOptions = require("addon-options").buildForRun({
+        packages: gPackages,
+        mainPackageName : package.name,
+      });
+      
+    } else {
+      throw new Error("Unknown dirType: "+dirType);
+    }
+    
+    addonOptions.noDumpInJsConsole = true;
+    
+    var tmpdir = require("temp").dir;
+    var xpiPath = null;
+    
+    if (prefs.get("run-as-app")) {
+      xpiPath = path.join(tmpdir, addonOptions.jetpackID+".zip");
+      if (path.existsSync(xpiPath))
+        fs.unlinkSync(xpiPath);
+      addonOptions = require("application-builder").build(addonOptions, package, xpiPath, true);
+    } else {
+      xpiPath = path.join(tmpdir, addonOptions.jetpackID+".xpi");
+      if (path.existsSync(xpiPath))
+        fs.unlinkSync(xpiPath);
+      addonOptions = require("xpi-builder").build(addonOptions, package, xpiPath, true);
+    }
+    delete addonOptions.resultFile;
+    delete addonOptions.logFile;
+    
+    if (prefs.get("run-within"))
+      currentProcess = runner.runWithin({
+        xpiPath: xpiPath,
+        jetpackID: addonOptions.jetpackID,
+        
+        stdout : function (msg) {
+          report.append(msg+"<br/>");
+        },
+        stderr : function (msg) {
+          report.append(msg+"<br/>");
+        },
+        quit: function () {
+          if (path.existsSync(xpiPath))
+            fs.unlinkSync(xpiPath);
+          report.append("<hr/>");
+          Killed();
+        }
+      });
+    else
+      currentProcess = runner.runRemote({
+        binary: prefs.get("binary-path"),
+        xpiPath: xpiPath,
+        xpiID: addonOptions.bundleID,
+        
+        runAsApp: prefs.get("run-as-app"),
+        
+        stdout : function (msg) {
+          report.append(msg+"<br/>");
+        },
+        stderr : function (msg) {
+          report.append(msg+"<br/>");
+        },
+        quit: function () {
+          if (path.existsSync(xpiPath))
+            fs.unlinkSync(xpiPath);
+          report.append("<hr/>");
+          Killed();
+        }
+      });
+    $("#run-state-info").text("Running");
+    $("#run-kill").addClass("on");
+    
+  } catch(e) {
+    report.append("<hr/>\n"+e);
+    if (currentProcess)
+      Kill();
+    else
+      Killed();
+  }
 }
 
 function Run() {
@@ -377,6 +392,18 @@ function Run() {
 
 function Test() {
   document.location.href = "jetpack:" + currentPackage.name + ":test";
+}
+
+function Kill() {
+  if (!currentProcess) return;
+  $("#run-state-info").text("Trying to kill");
+  currentProcess.kill();
+  
+}
+function Killed() {
+  $("#run-kill").removeClass("on");
+  $("#run-state-info").text("Terminated");
+  currentProcess = null;
 }
 
 const nsIFilePicker = Components.interfaces.nsIFilePicker;
@@ -437,8 +464,13 @@ function GetApp() {
 
 window.addEventListener("load",function () {
   try {
+    // Init default prefs
+    if (!prefs.has("run-within")) {
+      prefs.set("run-within", true);
+    }
     loadSettings();
     loadPackagesList();
+    
     var args = document.location.href.replace(/:$/,"").split(":");
     
     // home
@@ -455,6 +487,7 @@ window.addEventListener("load",function () {
       if (!p)
         return alert("Unable to found package '"+packageName+"'");
       openPackage(p);
+      loadPackagesList();
     }
     
     // Execution: test or run
@@ -468,7 +501,16 @@ window.addEventListener("load",function () {
         launch(p, "tests", cmd);
     }
     
+    
   } catch(e) {
-    Components.utils.reportError("load ex: "+e+" - "+e.stack);
+    alert("Exception during load: "+e+" \n "+e.stack);
   }
 },false);
+
+window.addEventListener("unload",function () {
+  Kill();
+}, false);
+
+} catch(e) {
+alert(e);
+}

@@ -6,6 +6,16 @@
   <script type="text/javascript" src="js/jquery-1.5.1.js"></script>
   <script type="text/javascript" src="js/jquery-ui-1.8.11.custom.min.js"></script>
   
+  <script>
+  function require(module) {
+    return Components.classes[
+      "@mozilla.org/harness-service;1?id=jetpack-runner"].
+      getService().wrappedJSObject.loader.require(module);
+  }
+  </script>
+  <script src="js/options.js"></script>
+  <script src="js/packages.js"></script>
+  <script src="js/report.js"></script>
   <script src="jetinspector.js"></script>
 </head>
 <body>
@@ -33,25 +43,25 @@
     <input type="checkbox" id="run-as-app" /> Run as application (instead of extension)
   </div>
   
-  <button id="general-options-button" onclick="toggleGeneralOptions()">Options</button>
+  <button id="general-options-button">Options</button>
 </div>
 
 <div id="packages-box">
   <h2>Packages:</h2>
-  <button id="packages-options-button" onclick="togglePackagesOptions()">Options</button>
+  <button id="packages-options-button">Options</button>
   <div id="packages-options">
     <div id="sdk-selection">
       <h3>Install a new SDK revision:</h3>
       Current version: <span id="current-sdk-version"></span><br/>
       <select id="sdk"></select>
-      <button onclick="downdloadAndUseSDK()">Download and use</button>
+      <button id="download-sdk">Download and use</button>
       <div id="sdk-loading" style="display: none; font-weight: bold;">Downloading and extracting SDK</div>
     </div>
     
     <div id="packages-path">
       <h3>Include Paths:</h3>
       <ul id="packages-path-list"></ul>
-      <button onclick="addIncludePath()">Add a new path</button>
+      <button id="packages-add-path">Add a new path</button>
     </div>
     
     <hr />
@@ -69,14 +79,14 @@
   
   <div id="directories">
     <div id="package-libs">
-      <a id="package-install" onclick="Run()" title="You need a main.js file to run an extension!">Run</a><br />
+      <span id="package-install" class="action" onclick="Run()" title="You need a main.js file to run an extension!">Run</span><br />
       <br />
       <h3>Modules</h3>
       <div id="package-libs-list"></div>
     </div>
     
     <div id="package-tests">
-      <a onclick="Test()">Execute all tests</a><br />
+      <span class="action" onclick="Test()">Execute all tests</span><br />
       <br />
       <h3>Unit tests</h3>
       <div id="package-tests-list"></div>
@@ -95,10 +105,6 @@
   <div id="report-title"></div>
   <pre id="console-report"></pre>
 </div>
-
-<script>
-//document.body.innerHTML = document.location.href
-</script>
 
 </body>
 </html>

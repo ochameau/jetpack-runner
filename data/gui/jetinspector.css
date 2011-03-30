@@ -1,6 +1,7 @@
 body {
   margin: 0; padding: 0;
   cursor: default;
+  font-family: Helvetica,Arial,Tahoma,sans-serif;
 }
 h1, h2, h3, h4 {
   -moz-user-select: none;
@@ -152,10 +153,25 @@ a:hover, li.link:hover {
   text-decoration: underline;
 }
 #directories div {
-  text-align: center;
+  padding-top: 1em;
 }
 #directories ul {
   text-align: left;
+}
+.action {
+  font-size: 0.8em;
+  font-weight: bold;
+  background: rgba(78, 88, 97, 1);
+  border-radius: 10px;
+  border: 1px solid gray;
+  color: white;
+  padding: 0 10px;
+  cursor: pointer;
+}
+
+span.action:hover {
+  color: black;
+  background: lightgray;
 }
 
 #package-libs, #package-tests {
@@ -185,6 +201,13 @@ a:hover, li.link:hover {
   font-weight: bold;
   margin-bottom: 0.3em;
 }
+#report-title[test-result="succeeded"] {
+  background-color: lightgreen;
+}
+#report-title[test-result="failed"] {
+  background-color: IndianRed;
+}
+
 #run-state {
   float: right;
 }
@@ -207,4 +230,18 @@ a:hover, li.link:hover {
   white-space: pre-wrap;
 }
 
+span.step {
+  font-weight: bold;
+}
+span.success {
+  color: darkgreen;
+}
+span.fail {
+  color: darkred;
+}
+span.resume {
+  font-family: Arial;
+  font-weight: bold;
+  font-size: 16px;
+}
 

@@ -1,233 +1,15 @@
 try {
-function require(module) {
-  return Components.classes[
-    "@mozilla.org/harness-service;1?id=jetpack-runner"].
-    getService().wrappedJSObject.loader.require(module);
-}
+
 var prefs = require("preferences-service");
 var path = require("path");
 var fs = require("fs");
 var process = require("process");
 var runner = require("addon-runner");
 
-var packagesPath = "";
-
 var currentPackage = null;
 var hasMain = false;
-var sdkVersions = null;
-var gPackages = null;
 var currentProcess = null;
 
-function loadSettings() {
-  var input = $("#run-as-app");
-  input.attr("checked", !!prefs.get("run-as-app"));
-  input.change(function () {
-    prefs.set("run-as-app", $(this).is(":checked"));
-  });
-}
-
-function toggleGeneralOptions() {
-  var options = $("#options");
-  options.toggle();
-  $("#title").toggle();
-  if (options.is(':visible')) {
-    initTargetPlatformBinary();
-  }
-}
-
-var optionsInited = false;
-function initTargetPlatformBinary() {
-  if (optionsInited)
-    return;
-  optionsInited = true;
-  var runWithin = $('#run-within');
-  var runWithinInput = $('#run-within input');
-  function updateWith(doRunWithin) {
-    runWithinInput.attr("checked", doRunWithin);
-    if (doRunWithin) {
-      $("#run-another").hide();
-    } else {
-      initBinariesList();
-      $("#run-another").show();
-    }
-  }
-  runWithinInput.change(function () {
-    var newValue = runWithinInput.is(":checked");
-    prefs.set("run-within", newValue);
-    updateWith(newValue);
-  });
-  $('#run-within span').click(function (event) {
-    var newValue = !runWithinInput.is(":checked");
-    runWithinInput.attr("checked", newValue);
-    prefs.set("run-within", newValue);
-    updateWith(newValue);
-  });
-  
-  updateWith(prefs.get("run-within"));
-}
-
-function initBinariesList() {
-  var selectNode = $("#run-another select");
-  
-  // Check if binaries list is already built
-  if (selectNode.children().length>0)
-    return;
-  
-  var mbs = require("moz-bin-search");
-  var bins = mbs.findBinaries();
-  var binaryPath = prefs.get("binary-path");
-  
-  // Select first binary as default one
-  if (!binaryPath || !path.existsSync(binaryPath)) {
-    binaryPath = bins[0];
-    prefs.set("binary-path",binaryPath);
-  }
-  if (bins.indexOf(binaryPath)==-1)
-    bins.unshift(binaryPath);
-  
-  // Build the list
-  for(var i=0; i<bins.length; i++) {
-    var bin = bins[i];
-    try {
-      // getInfo can throw easily on linux
-      var info = mbs.getInfo(bin);
-      selectNode.append('<option value="'+i+'"'+(bin==binaryPath?' selected="true"':'')+'>'+info.name+' '+info.version+' - '+bin+'</option>');
-    } catch(e) {}
-  }
-  
-  // Watch for change
-  selectNode.change(function () {
-    var i = parseInt($(this).val());
-    prefs.set("binary-path", bins[i]);
-  });
-}
-
-function addIncludePath(includePath) {
-  var path = selectFolder("Package(s) folder");
-  if (path) {
-    registerIncludePath(path);
-  }
-}
-
-function registerIncludePath(includePath) {
-  var previous = prefs.get("include-paths");
-  if (!previous || previous.split('\n').indexOf(includePath)==-1) {
-    try {
-      var count = 0;
-      for(var i in gPackages)
-        count--;
-      var packages = require("packages-inspector").getPackages(includePath, gPackages);
-      for(var i in packages)
-        count ++;
-      if (count <= 0) 
-        return alert("Unable to found a package in this include path");
-    } catch(e) {
-      return alert("Error while adding this include path : \n"+e);
-    }
-    prefs.set("include-paths", (previous?previous+'\n':'')+includePath);
-  } else {
-    return alert("This package path is already registered");
-  }
-  loadPackagesList();
-}
-
-function downdloadAndUseSDK() {
-  var path = selectFolder("SDK folder");
-  if (!path) return;
-  
-  var i = $("#sdk").val();
-  var sdk = sdkVersions[i];
-  prefs.set("sdk-version", sdk.version);
-  
-  var loading = $("#sdk-loading");
-  loading.show();
-  require("online-sdk").download(sdk, path, function () {
-    loading.hide();
-    registerIncludePath(path);
-  });
-}
-
-function togglePackagesOptions() {
-  var options = $("#packages-options");
-  options.toggle();
-  if (options.is(':visible')) {
-    initSdkVersions();
-  }
-}
-
-function initSdkVersions() {
-  var currentVersion = prefs.get("sdk-version");
-  $("#current-sdk-version").text(currentVersion ? currentVersion : "Unknown");
-  
-  var domTarget = $("#sdk");
-  if (domTarget.children().length > 0)
-    return;
-  require("online-sdk").getAvailableVersions(function (err, list) {
-    sdkVersions = list;
-    
-    for(var i=0; i<list.length; i++) {
-      var selected = (!currentVersion && i==list.length-1) || 
-        (currentVersion && list[i].version==currentVersion);
-      domTarget.append('<option value="'+i+'" '+(selected?'selected="true"':'')+'>'+list[i].version+'</option>');
-    }
-  });
-}
-
-
-function loadPackagesList() {
-  gPackages = null;
-  var packagesPaths = prefs.get("include-paths");
-  if (packagesPaths) {
-    packagesPaths = packagesPaths.split('\n');
-    var list = $("#packages-path-list");
-    list.empty();
-    for(var i=0; i<packagesPaths.length; i++) {
-      var pPath = packagesPaths[i];
-      list.append('<li title="'+pPath+'">.../'+pPath.split(/\/|\\/).slice(-3).join('/')+'</li>');
-      gPackages = require("packages-inspector").getPackages(pPath, gPackages);
-    }
-    
-    if (gPackages["addon-kit"] && !prefs.get("sdk-version") && gPackages["addon-kit"].version) {
-      prefs.set("sdk-version", gPackages["addon-kit"].version);
-      initSdkVersions();
-    }
-  }
-  var domTarget = $("#packages-list");
-  domTarget.empty();
-  
-  var list = [];
-  for(var i in gPackages) {
-    var p = gPackages[i];
-    list.push(i);
-  }
-  list.sort();
-  
-  var count = 0;
-  for(var i=0; i<list.length; i++) {
-    var p = gPackages[list[i]];
-    var elt = $("<li></li>");
-    elt.addClass("link");
-    if (currentPackage && p.name == currentPackage.name)
-      elt.addClass("current");
-    else
-      elt.removeClass("current");
-    elt.text(p.name);
-    (function (elt,p) {
-      elt.click(function () {
-        document.location = "jetpack:" + p.name;
-      });
-    })(elt,p);
-    domTarget.append(elt);
-    count++;
-  }
-  
-  if (count==0) {
-    
-    $("#sdk-selection").show();
-    
-    domTarget.append("<li>No packages</li>");
-  }
-}
 
 function openPackage(package) {
   currentPackage = package;
@@ -240,7 +22,6 @@ function openPackage(package) {
   function fillListWithFiles(ul, filesByDir, dirType) {
     ul.html("");
     for(var dir in filesByDir) {
-      //var topLi=$("<li></li>");
       var subUl = $("<ul></ul>");
       var dirName = $('<span class="package-dir-name"></span>');
       dirName.text(dir+":");
@@ -269,30 +50,34 @@ function openPackage(package) {
   
 }
 
+
 function launch(package, dirType, testFileName) {
   $("#run-panel").show();
-  var report = $("#console-report");
-  report.empty();
+  
   try {
-    
-    if (dirType == "tests") {
-      if (testFileName)
-        $("#report-title").text("Running test "+package.name+", "+testFileName+":");
-      else
-        $("#report-title").text("Running all tests from "+package.name+":");
-    }
-    else {
-      $("#report-title").text("Running "+package.name+":");
-    }
-    
+    // Kill previous process if it's still alive
     if (currentProcess)
       Kill();
     
+    var title = "";
+    if (dirType == "tests") {
+      if (testFileName)
+        title = "Running test " + package.name + ", " + testFileName + ":";
+      else
+        title = "Running all tests from " + package.name + ":";
+    }
+    else {
+      title = "Running " + package.name + ":";
+    }
+    Report.run(title);
+    
+    // 1/ Built addon's big options object that contain all data needed to
+    // bootstrap/launch the addon 
     var addonOptions = null;
     if (dirType=="tests") {
       
       addonOptions = require("addon-options").buildForTest({
-        packages: gPackages,
+        packages: Packages.dict,
         mainPackageName: package.name,
         testName: testFileName?testFileName:null
       });
@@ -306,7 +91,7 @@ function launch(package, dirType, testFileName) {
     } else if (dirType=="libs") {
       
       addonOptions = require("addon-options").buildForRun({
-        packages: gPackages,
+        packages: Packages.dict,
         mainPackageName : package.name,
       });
       
@@ -316,6 +101,9 @@ function launch(package, dirType, testFileName) {
     
     addonOptions.noDumpInJsConsole = true;
     
+    
+    // 2/ Build one XPI by reading this options object
+    // either a "xulrunner application zip" or a regular firefox extension XPI
     var tmpdir = require("temp").dir;
     var xpiPath = null;
     
@@ -333,25 +121,27 @@ function launch(package, dirType, testFileName) {
     delete addonOptions.resultFile;
     delete addonOptions.logFile;
     
-    if (prefs.get("run-within"))
+    // 3/ Run the addon either inside the current firefox instance
+    // or in a remote one
+    if (prefs.get("run-within")) {
       currentProcess = runner.runWithin({
         xpiPath: xpiPath,
         jetpackID: addonOptions.jetpackID,
         
         stdout : function (msg) {
-          report.append(msg+"<br/>");
+          Report.log(msg);
         },
         stderr : function (msg) {
-          report.append(msg+"<br/>");
+          Report.log(msg);
         },
         quit: function () {
           if (path.existsSync(xpiPath))
             fs.unlinkSync(xpiPath);
-          report.append("<hr/>");
           Killed();
         }
       });
-    else
+    } 
+    else {
       currentProcess = runner.runRemote({
         binary: prefs.get("binary-path"),
         xpiPath: xpiPath,
@@ -360,23 +150,22 @@ function launch(package, dirType, testFileName) {
         runAsApp: prefs.get("run-as-app"),
         
         stdout : function (msg) {
-          report.append(msg+"<br/>");
+          Report.log(msg);
         },
         stderr : function (msg) {
-          report.append(msg+"<br/>");
+          Report.log(msg);
         },
         quit: function () {
           if (path.existsSync(xpiPath))
             fs.unlinkSync(xpiPath);
-          report.append("<hr/>");
           Killed();
         }
       });
-    $("#run-state-info").text("Running");
-    $("#run-kill").addClass("on");
+    }
+    
     
   } catch(e) {
-    report.append("<hr/>\n"+e);
+    Report.error("Internal error: " + e + "\n" + e.stack);
     if (currentProcess)
       Kill();
     else
@@ -396,13 +185,11 @@ function Test() {
 
 function Kill() {
   if (!currentProcess) return;
-  $("#run-state-info").text("Trying to kill");
   currentProcess.kill();
-  
+  Report.kill();
 }
 function Killed() {
-  $("#run-kill").removeClass("on");
-  $("#run-state-info").text("Terminated");
+  Report.killed();
   currentProcess = null;
 }
 
@@ -421,17 +208,6 @@ function selectFile(title, filename, ext) {
   }
   return null;
 }
-function selectFolder(title) {
-  var fp = Components.classes["@mozilla.org/filepicker;1"]
-               .createInstance(nsIFilePicker);
-  fp.init(window, title, nsIFilePicker.modeGetFolder);
-  
-  var rv = fp.show();
-  if (rv == nsIFilePicker.returnOK) {
-    return fp.file.path;
-  }
-  return null;
-}
 
 function GetXPI() {
   var file = selectFile(
@@ -443,7 +219,7 @@ function GetXPI() {
     return;
   
   var addonOptions = require("addon-options").buildForRun({
-      packages: gPackages,
+      packages: Packages.dict,
       mainPackageName : currentPackage.name,
     });
   
@@ -459,23 +235,22 @@ function GetApp() {
   if (!file)
     return;
   
-  require("application-builder").build(gPackages, currentPackage, file);
+  require("application-builder").build(Packages.dict, currentPackage, file);
 }
 
-window.addEventListener("load",function () {
+window.addEventListener("load", function onload() {
+  window.removeEventListener("load", onload, false);
   try {
-    // Init default prefs
-    if (!prefs.has("run-within")) {
-      prefs.set("run-within", true);
-    }
-    loadSettings();
-    loadPackagesList();
+    
+    Options.init();
+    Packages.init();
+    Packages.refreshList();
+    Report.init();
     
     var args = document.location.href.replace(/:$/,"").split(":");
     
     // home
     if (args.length >= 1) {
-      
       
     } 
     
@@ -483,11 +258,11 @@ window.addEventListener("load",function () {
     // Package
     if (args.length >= 2) {
       var packageName = args[1];
-      p = gPackages[packageName];
+      p = Packages.dict[packageName];
       if (!p)
         return alert("Unable to found package '"+packageName+"'");
       openPackage(p);
-      loadPackagesList();
+      Packages.refreshList();
     }
     
     // Execution: test or run
@@ -505,12 +280,12 @@ window.addEventListener("load",function () {
   } catch(e) {
     alert("Exception during load: "+e+" \n "+e.stack);
   }
-},false);
+}, false);
 
-window.addEventListener("unload",function () {
+window.addEventListener("unload", function () {
   Kill();
 }, false);
 
 } catch(e) {
-alert(e);
+  alert(e);
 }

@@ -140,6 +140,7 @@ Packages.downloadSDK = function PackagesDownloadSDK() {
 }
 
 Packages._selectFolder = function PackagesSelectFolder(title) {
+  var nsIFilePicker = Components.interfaces.nsIFilePicker;
   var fp = Components.classes["@mozilla.org/filepicker;1"]
                .createInstance(nsIFilePicker);
   fp.init(window, title, nsIFilePicker.modeGetFolder);

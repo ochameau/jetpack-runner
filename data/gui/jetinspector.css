@@ -91,18 +91,19 @@ a:hover, li.link:hover {
   margin-bottom: 0.5em;
 }
 
-#packages-options-button {
-  position: absolute;
-  right: 1em;
-  top: 1.4em;
-}
-
 #packages-path h1 {
   margin-bottom: 0;
 }
 #packages-path textarea {
   height: 3em;
   width: 100%;
+}
+
+#create-addon-button {
+  line-height: 30px;
+}
+#packages-options-button {
+  margin-left: 10px;
 }
 
 #packages-list > li.current {
@@ -245,3 +246,30 @@ span.resume {
   font-size: 16px;
 }
 
+
+
+/* Addon creation form */
+
+#create-addon {
+  display: none;
+  padding: 30px;
+  padding-left: 330px;
+}
+
+#create-addon input {
+  width: 250px;
+}
+#create-addon .formname {
+  font-weight: bold;
+  margin-top: 10px;
+  margin-left: 5px;
+}
+#create-addon .action {
+  margin-top: 20px;
+  margin-left: 70px;
+  display: block;
+  line-height: 25px;
+  width: 100px;
+  
+  text-align: center;
+}

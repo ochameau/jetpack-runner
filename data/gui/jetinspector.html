@@ -48,7 +48,6 @@
 
 <div id="packages-box">
   <h2>Packages:</h2>
-  <button id="packages-options-button">Options</button>
   <div id="packages-options">
     <div id="sdk-selection">
       <h3>Install a new SDK revision:</h3>
@@ -66,6 +65,10 @@
     
     <hr />
   </div>
+  
+  <span id="create-addon-button" class="action" onclick="CreateAddon()">Create addon</span>
+  <span id="packages-options-button" class="action">Options</span>
+  
   <ul id="packages-list"></ul>
 </div>
 
@@ -92,7 +95,6 @@
       <div id="package-tests-list"></div>
     </div>
     
-    
   </div>
   <div style="clear: both"></div>
 </div>
@@ -104,6 +106,34 @@
   </div>
   <div id="report-title"></div>
   <pre id="console-report"></pre>
+</div>
+
+<div id="create-addon">
+
+  <div class="formname">Name:</div>
+  <input type="text" id="addon-name" value="" />
+  <br/>
+  
+  <div class="formname">Description:</div>
+  <input type="text" id="addon-description" value="" />
+  <br/>
+  
+  <div class="formname">Author:</div>
+  <input type="text" id="addon-author" value="" />
+  <br/>
+  
+  <div class="formname">Licence:</div>
+  <input type="text" id="addon-licence" value="MPL 1.1/GPL 2.0/LGPL 2.1" />
+  <br />
+  
+  <div class="formname">Template:</div>
+  <select id="addon-template">
+    <option value="pagemod">Userscript / Page-mod</option>
+    <option value="widget">Widget</option>
+    <option value="empty">Empty</option>
+  </select>
+  
+  <span class="action" onclick="DoCreateAddon()">Create</span>
 </div>
 
 </body>

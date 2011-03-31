@@ -193,8 +193,82 @@ function Killed() {
   currentProcess = null;
 }
 
-const nsIFilePicker = Components.interfaces.nsIFilePicker;
+function selectFolder(title) {
+  var nsIFilePicker = Components.interfaces.nsIFilePicker;
+  var fp = Components.classes["@mozilla.org/filepicker;1"]
+               .createInstance(nsIFilePicker);
+  fp.init(window, title, nsIFilePicker.modeGetFolder);
+  
+  var rv = fp.show();
+  if (rv == nsIFilePicker.returnOK) {
+    return fp.file.path;
+  }
+  return null;
+}
+
+function CreateAddon() {
+  $("#package-description").hide();
+  $("#run-panel").hide();
+  $("#create-addon").show();
+  
+}
+
+function DoCreateAddon() {
+  var addonPath = selectFolder("Addon folder");
+  
+  require("rm-rec").rm(addonPath, function (err) {
+    if (err) alert(err);
+    try {
+      fs.mkdirSync(addonPath);
+    } catch(e) {}
+    try {
+      fs.mkdirSync(path.join(addonPath, "lib"));
+    } catch(e) {}
+    try {
+    fs.mkdirSync(path.join(addonPath, "tests"));
+    } catch(e) {}
+    try {
+    fs.mkdirSync(path.join(addonPath, "data"));
+    } catch(e) {}
+    try {
+    fs.mkdirSync(path.join(addonPath, "docs"));
+    } catch(e) {}
+    
+    var packageName = $("#addon-name").val().toLowerCase();
+    
+    var pack = {
+      "name": packageName,
+      "description": $("#addon-description").val(),
+      "keywords": [],
+      "author": $("#addon-author").val(),
+      "contributors": [],
+      "version": "0.1",
+      "license": $("#addon-license").val(),
+      "dependencies": ["addon-kit"]
+    };
+    fs.writeFileSync(path.join(addonPath, "package.json"), JSON.stringify(pack).replace(/,/g,",\n"));
+    fs.writeFileSync(path.join(addonPath, "README.md"), "");
+    var template = $("#addon-template").val();
+    var templateFolder = path.join(require("url").toFilename(require("self").data.url()),"templates",template);
+    //fs.writeFileSync(path.join(addonPath, "lib", "main.js"), fs.readFileSync(path.join(templatefile)));
+    
+    require("copy-rec").copy(templateFolder, addonPath, 
+      function (err) {
+        if (err)
+          return alert(err)
+        $("#create-addon").hide();
+        
+        // Register this newly created module and switch to it:
+        Packages.registerIncludePath(addonPath);
+        
+        document.location = "jetpack:" + packageName;
+      });
+    
+  });
+}
+
 function selectFile(title, filename, ext) {
+  var nsIFilePicker = Components.interfaces.nsIFilePicker;
   var fp = Components.classes["@mozilla.org/filepicker;1"]
                .createInstance(nsIFilePicker);
   fp.init(window, title, nsIFilePicker.modeSave);

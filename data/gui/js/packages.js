@@ -92,6 +92,7 @@ Packages.refreshList = function PackagesRefreshList() {
   
   if (count == 0) {
     $("#sdk-selection").show();
+    Packages.toggleOptions();
     domTarget.append("<li>No packages</li>");
   }
 }

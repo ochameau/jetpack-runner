@@ -53,6 +53,7 @@ Packages.refreshList = function PackagesRefreshList() {
       list.append('<li title="' + pPath + '">.../' + 
         pPath.split(/\/|\\/).slice(-3).join('/') + 
         '</li>');
+      if (!path.existsSync(pPath)) continue;
       Packages.dict = packagesInspector.getPackages(pPath, Packages.dict);
     }
     
@@ -126,6 +127,11 @@ Packages.loadSDKVersion = function PackagesLoadSDKVersion() {
 Packages.downloadSDK = function PackagesDownloadSDK() {
   var path = Packages._selectFolder("SDK folder");
   if (!path) return;
+  
+  if (fs.readdirSync(path).length > 0) 
+    if (!window.confirm("This folder is not empty, all data inside will be erased.\n"+
+      "Do you really want to install the SDK in this directory ?"))
+      return;
   
   var i = $("#sdk").val();
   var sdk = Packages._sdkVersions[i];

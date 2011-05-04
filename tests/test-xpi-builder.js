@@ -35,11 +35,6 @@ exports.testBuildXPI = function (test) {
 
 exports.testCurrentProcessInstall = function (test) {
   
-  // Remove HARNESS_OPTIONS or it will be used by harness.js:503->getDefaults()
-  let environ = Cc["@mozilla.org/process/environment;1"]
-                  .getService(Ci.nsIEnvironment);
-  environ.set("HARNESS_OPTIONS","");
-  
   let file = Cc['@mozilla.org/file/local;1'].createInstance(Ci.nsILocalFile);
   file.initWithPath(xpiPath);
   

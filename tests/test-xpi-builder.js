@@ -12,7 +12,7 @@ function getDataFilePath(file) {
 const xpiPath = getDataFilePath("test-harness/test.xpi");
 
 exports.testBuildXPI = function (test) {
-  let apiutilsPackagePath = path.join(require("url").toFilename(self.data.url()),"..","..","api-utils");
+  let apiutilsPackagePath = path.join(require("url").toFilename(self.data.url("")),"..","..","api-utils");
   let apiutils = require("packages-inspector").getPackage(apiutilsPackagePath);
   
   let packagePath = getDataFilePath("test-harness/package/");

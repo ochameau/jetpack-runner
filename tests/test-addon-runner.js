@@ -23,7 +23,7 @@ let mainPackage = null;
 let xpiPath = null;
 
 exports.prepateOptions = function (test) {
-  let apiutilsPackagePath = path.join(require("url").toFilename(self.data.url()),"..","..","api-utils");
+  let apiutilsPackagePath = path.join(require("url").toFilename(self.data.url("")),"..","..","api-utils");
   let apiutils = require("packages-inspector").getPackage(apiutilsPackagePath);
   
   let packagePath = getDataFilePath("test-harness/package/");
@@ -35,7 +35,7 @@ exports.prepateOptions = function (test) {
       mainPackageName : mainPackage.name,
     });
   
-  let workdir = path.join(require("url").toFilename(require("self").data.url()), "..", "workdir");
+  let workdir = path.join(require("url").toFilename(require("self").data.url("")), "..", "workdir");
   xpiPath = path.join(workdir, "test.xpi");
   if (path.existsSync(xpiPath))
     fs.unlinkSync(xpiPath);

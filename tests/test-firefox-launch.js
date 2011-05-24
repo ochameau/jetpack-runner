@@ -5,8 +5,7 @@ const path = require("path");
 exports.testLaunchFirefox = function(test) {
   test.waitUntilDone(10000);
   
-  let profile = path.join(require("url").toFilename(self.data.url()),
-    "..","workdir","profile-launch-test");
+  let profile = path.join(require("url").toFilename(self.data.url("../workdir/profile-launch-test")));
   
   try {
     fs.mkdir(profile);

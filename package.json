@@ -2,7 +2,7 @@
     "name": "jetpack-runner", 
     "license": "GPL 2.0", 
     "author": "Alexandre Poirot", 
-    "version": "0.1", 
+    "version": "0.1.1", 
     "dependencies": [
         "addon-kit", "api-utils", "moz-js", "subprocess"
     ], 

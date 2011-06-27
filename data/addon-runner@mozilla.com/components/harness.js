@@ -318,7 +318,6 @@ function buildHarnessService(rootFileSpec, dump, logError,
       harnessService = null;
       
       // Offer a way to detect jetpack addon unload
-      Components.utils.reportError("internal quit : "+options.jetpackID);
       obSvc.notifyObservers(null, "internal-quit-" + options.jetpackID, null);
       
       obSvc.removeObserver(this, "quit-application-granted");

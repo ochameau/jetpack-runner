@@ -27,6 +27,7 @@ Report.log = function ReportLog(msg) {
   else if (m = msg.match(/^(\d+) of (\d+) tests passed./)) {
     type = "resume";
     $("#report-title").attr("test-result", m[1] == m[2] ? "succeeded" : "failed");
+    Kill();
   }
   
   if (type)

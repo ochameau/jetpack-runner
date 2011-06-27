@@ -1,0 +1,6 @@
+{
+  "lib": "manifest-lib",
+  "directories": {
+    "lib": "directories-lib"
+  }
+}

@@ -8,9 +8,13 @@
   
   <script>
   function require(module) {
+    try {
     return Components.classes[
-      "@mozilla.org/harness-service;1?id=jetpack-runner"].
+      "@mozilla.org/harness-service;1?id=jetpack-runner@jetpack"].
       getService().wrappedJSObject.loader.require(module);
+    } catch(e) {
+      alert("---"+e);
+    }
   }
   </script>
   <script src="js/options.js"></script>

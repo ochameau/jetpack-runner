@@ -35,8 +35,7 @@ exports.prepateOptions = function (test) {
       mainPackageName : mainPackage.name,
     });
   
-  let workdir = path.join(require("url").toFilename(require("self").data.url("")), "..", "workdir");
-  xpiPath = path.join(workdir, "test.xpi");
+  xpiPath = require("temp").path("test-addon-runner.xpi");
   if (path.existsSync(xpiPath))
     fs.unlinkSync(xpiPath);
   
@@ -61,7 +60,6 @@ function runRemoteAndCheck(test, xpiPath, addonID, runAsApp) {
         console.log("Got data : "+data);
     },
     quit: function (data) {
-      console.log(">>>>>>>>>>>>>>>>>>>> QUIT REMOTE");
       if (path.existsSync(xpiPath))
         fs.unlinkSync(xpiPath);
       test.done();
@@ -90,7 +88,6 @@ function runWithinAndCheck(test, xpiPath, jetpackID) {
         console.log("Got data : "+data);
     },
     quit: function (data) {
-      console.log(">>>>>>>>>>>>>>>>>>>> QUIT WITHIN");
       if (path.existsSync(xpiPath))
         fs.unlinkSync(xpiPath);
       test.done();

@@ -10,6 +10,12 @@ function readManifest(repoName, packageName) {
   return JSON.parse(fs.readFileSync(file));
 }
 
+exports.testNoName = function (test) {
+  let packages = pi.getPackages(getDataFilePath("test-pi/no-name"));
+  test.assert("no-name" in packages, "has a 'no-name' package");
+  test.assertEqual(packages["no-name"].name, "no-name", "package name defaults to folder name");
+}
+
 exports.testGetPackages = function (test) {
   let packages = pi.getPackages(getDataFilePath("test-pi/packages"));
   packages = pi.getPackages(getDataFilePath("test-pi/another-packages/my-other-package"), packages);
@@ -19,7 +25,7 @@ exports.testGetPackages = function (test) {
     let p = packages[name];
     list.push({name:name,value:p});
     test.assertEqual(p.name,name);
-    let repo = name=="my-other-package"?"another-packages":"packages";
+    let repo = name=="my-other-package" ? "another-packages" : "packages";
     let json = readManifest(repo, name);
     test.assertEqual(p.description,json.description);
     test.assertEqual(p.lib.length,1);
@@ -49,12 +55,12 @@ exports.testGetExtraInfos = function (test) {
   let info = pi.getExtraInfo(packages["api-utils"]);
   info.libs.lib.sort(function (a, b) a.name<b.name);
   test.assertEqual(info.libs.lib.length,3);
-  test.assertEqual(JSON.stringify(info.libs.lib[0]),JSON.stringify({fullFilePath:getModulePath("lib/folder/sub-folder/sub-sub-lib.js"),path:["folder","sub-folder"],name:"sub-sub-lib"}));
-  test.assertEqual(JSON.stringify(info.libs.lib[1]),JSON.stringify({fullFilePath:getModulePath("lib/folder/sub-lib.js"),path:["folder"],name:"sub-lib"}));
-  test.assertEqual(JSON.stringify(info.libs.lib[2]),JSON.stringify({fullFilePath:getModulePath("lib/lib.js"),path:[],name:"lib"}));
+  test.assertEqual(JSON.stringify(info.libs.lib[0]),JSON.stringify({fullFilePath:getModulePath("lib/folder/sub-folder/sub-sub-lib.js"),path:"folder/sub-folder/sub-sub-lib",name:"sub-sub-lib"}));
+  test.assertEqual(JSON.stringify(info.libs.lib[1]),JSON.stringify({fullFilePath:getModulePath("lib/folder/sub-lib.js"),path:"folder/sub-lib",name:"sub-lib"}));
+  test.assertEqual(JSON.stringify(info.libs.lib[2]),JSON.stringify({fullFilePath:getModulePath("lib/lib.js"),path:"lib",name:"lib"}));
   info.tests.tests.sort(function (a, b) a.name>b.name);
   test.assertEqual(info.tests.tests.length,3);
-  test.assertEqual(JSON.stringify(info.tests.tests[0]),JSON.stringify({fullFilePath:getModulePath("tests/folder/sub-folder/sub-sub-test.js"),path:["folder","sub-folder"],name:"sub-sub-test"}));
-  test.assertEqual(JSON.stringify(info.tests.tests[1]),JSON.stringify({fullFilePath:getModulePath("tests/folder/sub-test.js"),path:["folder"],name:"sub-test"}));
-  test.assertEqual(JSON.stringify(info.tests.tests[2]),JSON.stringify({fullFilePath:getModulePath("tests/test.js"),path:[],name:"test"}));  
+  test.assertEqual(JSON.stringify(info.tests.tests[0]),JSON.stringify({fullFilePath:getModulePath("tests/folder/sub-folder/sub-sub-test.js"),path:"folder/sub-folder/sub-sub-test",name:"sub-sub-test"}));
+  test.assertEqual(JSON.stringify(info.tests.tests[1]),JSON.stringify({fullFilePath:getModulePath("tests/folder/sub-test.js"),path:"folder/sub-test",name:"sub-test"}));
+  test.assertEqual(JSON.stringify(info.tests.tests[2]),JSON.stringify({fullFilePath:getModulePath("tests/test.js"),path:"test",name:"test"}));  
 }

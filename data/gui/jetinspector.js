@@ -28,9 +28,9 @@ function openPackage(package) {
       subUl.append(dirName);
       for each(var file in filesByDir[dir]) {
         var li = $("<li></li>");
-        if (file.name == "main.js" && dirType == "libs")
+        if (file.name == "main" && dirType == "libs")
           hasMain = true;
-        li.text(file.path.concat([file.name]).join("/"));
+        li.text(file.path);
         if (dirType=="tests") {
           li.addClass("link");
           (function (dir,file) {

@@ -46,8 +46,8 @@ exports.testRequire = function(test) {
             "const foo = require('two');";
   assert(content, ["one", "two"]);
 
-  content = "const foo = require('one'); const foo = require('two');";
-  assert(content, ["one", "two"]);
+  content = "const foo = require('one'); const foo = require('tw');";
+  assert(content, ["one", "tw"]);
 
   // define calls
 

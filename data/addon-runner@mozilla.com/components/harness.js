@@ -185,6 +185,9 @@ function buildHarnessService(rootFileSpec, dump, logError,
     var loader = new jsm.Loader({rootPaths: options.rootPaths.slice(),
                                  print: dump,
                                  packaging: packaging,
+                                 metadata: options.metadata,
+                                 uriPrefix: options.uriPrefix,
+                                 name: options.name,
                                  globals: { packaging: packaging }
                                 });
     packaging.__setLoader(loader);
@@ -222,6 +225,7 @@ function buildHarnessService(rootFileSpec, dump, logError,
     enableE10s: options.enable_e10s,
 
     jetpackID: options.jetpackID,
+    uriPrefix: options.uriPrefix,
 
     bundleID: options.bundleID,
 
@@ -313,6 +317,8 @@ function buildHarnessService(rootFileSpec, dump, logError,
       isStarted = false;
       harnessService = null;
       
+      // Offer a way to detect jetpack addon unload
+      Components.utils.reportError("internal quit : "+options.jetpackID);
       obSvc.notifyObservers(null, "internal-quit-" + options.jetpackID, null);
       
       obSvc.removeObserver(this, "quit-application-granted");
@@ -395,9 +401,10 @@ function defaultLogError(e, print) {
   if (!print)
     print = dump;
 
-  print(e + " (" + e.fileName + ":" + e.lineNumber + ")\n");
+  var level = "error";
+  print(e + " (" + e.fileName + ":" + e.lineNumber + ")\n", level);
   if (e.stack)
-    print("stack:\n" + e.stack + "\n");
+    print("stack:\n" + e.stack + "\n", level);
 }
 
 // Builds an onQuit() function that writes a result file if necessary
@@ -415,7 +422,7 @@ function buildDevQuit(options, dump) {
   function attemptQuit() {
     var appStartup = Cc['@mozilla.org/toolkit/app-startup;1'].
                      getService(Ci.nsIAppStartup);
-    appStartup.quit(Ci.nsIAppStartup.eAttemptQuit);
+    //appStartup.quit(Ci.nsIAppStartup.eAttemptQuit);
   }
 
   return function onQuit(result) {
@@ -458,14 +465,23 @@ function buildForsakenConsoleDump(dump) {
     }
   }
 
-  return function forsakenConsoleDump(msg) {
+  return function forsakenConsoleDump(msg, level) {
     // No harm in calling dump() just in case the
     // end-user *can* see the console...
     dump(msg);
 
     msg = stringify(msg);
     if (msg.indexOf('\n') >= 0) {
-      cService.logStringMessage(buffer + msg);
+      var str = buffer + msg;
+      if (level === "error") {
+        var err = Cc["@mozilla.org/scripterror;1"]
+                  .createInstance(Ci.nsIScriptError);
+        str = str.replace(/^error: /, "");
+        err.init(str, null, null, 0, 0, 0, "Add-on SDK");
+        cService.logMessage(err);
+      }
+      else
+        cService.logStringMessage(str);
       buffer = "";
     } else {
       buffer += msg;
@@ -506,33 +522,35 @@ function getDefaults(rootFileSpec) {
     defaultLogError(e);
     throw e;
   }
-  
+
   var onQuit = function() {};
   
   // For some unknown reasons, global dump doesn't work there
   // so use hidden window's one instead
   var hiddenWindow = null;
   let observerService = Cc["@mozilla.org/observer-service;1"]
-                              .getService(Ci.nsIObserverService);
+                        .getService(Ci.nsIObserverService);
   var doDump = function (msg) {
-    if (!hiddenWindow)
-      hiddenWindow = Cc["@mozilla.org/appshell/appShellService;1"]
-        .getService(Ci.nsIAppShellService)
-        .hiddenDOMWindow;
+  if (!hiddenWindow)
+    hiddenWindow = Cc["@mozilla.org/appshell/appShellService;1"]
+       .getService(Ci.nsIAppShellService)
+       .hiddenDOMWindow;
     hiddenWindow.dump(msg);
-    observerService.notifyObservers(null, 
-      "internal-log-" + options.jetpackID, msg);
+    
+    // Offer a way to observe an addon messages
+    observerService.notifyObservers(null, "internal-log-" + options.jetpackID, 
+      msg);
   };
-  
+
   if ('resultFile' in options)
     onQuit = buildDevQuit(options, print);
   else if (!('noKillAtTestEnd' in options))
     onQuit = function () {
       var appStartup = Cc['@mozilla.org/toolkit/app-startup;1'].
-                       getService(Ci.nsIAppStartup);
-      appStartup.quit(Ci.nsIAppStartup.eAttemptQuit);
+                      getService(Ci.nsIAppStartup);
+      //appStartup.quit(Ci.nsIAppStartup.eAttemptQuit);
     }
-  
+
   if (!('resultFile' in options) && !('noDumpInJsConsole' in options))
     // If we're not being run by cfx or some other kind of tool that is
     // ensuring dump() calls are visible, we'll have to log to the
@@ -552,8 +570,8 @@ function getDefaults(rootFileSpec) {
     logStream.init(logFile, -1, -1, 0);
   }
 
-  function print(msg) {
-    doDump(msg);
+  function print(msg, level) {
+    doDump(msg, level);
     if (logStream && typeof(msg) == "string") {
       logStream.write(msg, msg.length);
       logStream.flush();

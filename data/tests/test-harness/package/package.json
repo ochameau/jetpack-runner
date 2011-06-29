@@ -6,7 +6,7 @@
     "dependencies": [
         
     ], 
-    "main": "main", 
+    "main": "./lib/main", 
     "id": "jid0-k60wfE2Xuwso9RsQpqdbOXw8SGE", 
     "description": "Jetpack application test"
 }

@@ -7,13 +7,11 @@ var process = require("process");
 var runner = require("addon-runner");
 
 var currentPackage = null;
-var hasMain = false;
 var currentProcess = null;
 
 
 function openPackage(package) {
   currentPackage = package;
-  hasMain = false;
   $("#package-description").show();
   $("#package-name").text("Package: "+package.name);
   
@@ -28,8 +26,6 @@ function openPackage(package) {
       subUl.append(dirName);
       for each(var file in filesByDir[dir]) {
         var li = $("<li></li>");
-        if (file.name == "main" && dirType == "libs")
-          hasMain = true;
         li.text(file.path);
         if (dirType=="tests") {
           li.addClass("link");
@@ -174,8 +170,6 @@ function launch(package, dirType, testFileName) {
 }
 
 function Run() {
-  if (!hasMain)
-    return alert("You need a 'main.js' file in order to run an extension");
   document.location.href = "jetpack:" + currentPackage.name + ":run";
 }
 

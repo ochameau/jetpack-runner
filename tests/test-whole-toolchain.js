@@ -155,7 +155,7 @@ exports.testManifestWithoutMain = function (test) {
     mainPackageName: name,
     
     checkPackages: function (packages) {
-      test.assertEqual(packages[name].main, "main", "When `main` attributes is ommitted and main.js exists, this module is used as the main entry point.");
+      test.assertEqual(packages[name].main, "./main", "When `main` attributes is ommitted and main.js exists, this module is used as the main entry point.");
     },
     checkManifest: function (options) {
       test.assertEqual(options.main, name + "/main",
@@ -181,6 +181,7 @@ exports.testManifestWithMain = function (test) {
 }
 
 exports.testManifestWithMainSameAsPackage = function (test) {
+  // main module has same name than package
   let name = "main-with-package-name";
   runTest(test, {
     packagesPath: "main/" + name,
@@ -191,6 +192,41 @@ exports.testManifestWithMainSameAsPackage = function (test) {
     },
     checkManifest: function (options) {
       test.assertEqual(options.main, name + "/" + name,
+        "Manifest `main` is correct, i.e. absolute path to main module.");
+    }
+  });
+}
+
+exports.testManifestWithMainInLibDir = function (test) {
+  // We give relative path from package folder, to a main module that lives
+  // in a lib folder
+  let name = "main-in-lib";
+  runTest(test, {
+    packagesPath: "main/" + name,
+    mainPackageName: name,
+    
+    checkPackages: function (packages) {
+      test.assertEqual(packages[name].main, "lib/main-in-lib", "When `main` attributes is set, the specified module is used as the main entry point. And the attribute is normalized");
+    },
+    checkManifest: function (options) {
+      test.assertEqual(options.main, name + "/main-in-lib",
+        "Manifest `main` is correct, i.e. absolute path to main module.");
+    }
+  });
+}
+
+exports.testManifestWithMainRelativeToLibDir = function (test) {
+  // We give relative path from the lib folder to the main module
+  let name = "main-relative-to-lib";
+  runTest(test, {
+    packagesPath: "main/" + name,
+    mainPackageName: name,
+    
+    checkPackages: function (packages) {
+      test.assertEqual(packages[name].main, "lib/main-in-lib", "When `main` attributes is set, the specified module is used as the main entry point. And the attribute is normalized");
+    },
+    checkManifest: function (options) {
+      test.assertEqual(options.main, name + "/main-in-lib",
         "Manifest `main` is correct, i.e. absolute path to main module.");
     }
   });

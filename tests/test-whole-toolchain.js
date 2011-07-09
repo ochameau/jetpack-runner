@@ -105,7 +105,7 @@ function assertRequire(test, options, packageName, section, module, requires, me
 exports.testManifestLibFirstPriority = function (test) {
   let name = "lib-first-priority";
   runTest(test, {
-    packagesPath: "folder-priorities/" + name,
+    packagesPath: "folders/folder-priorities/" + name,
     mainPackageName: name,
     
     checkPackages: function (packages) {
@@ -121,7 +121,7 @@ exports.testManifestLibFirstPriority = function (test) {
 exports.testManifestDirectoriesSecondPriority = function (test) {
   let name = "directories-second-priority";
   runTest(test, {
-    packagesPath: "folder-priorities/" + name,
+    packagesPath: "folders/folder-priorities/" + name,
     mainPackageName: name,
     
     checkPackages: function (packages) {
@@ -136,11 +136,26 @@ exports.testManifestDirectoriesSecondPriority = function (test) {
 exports.testRootLastPriority = function (test) {
   let name = "root-last-priority";
   runTest(test, {
-    packagesPath: "folder-priorities/" + name,
+    packagesPath: "folders/folder-priorities/" + name,
     mainPackageName: name,
     
     checkPackages: function (packages) {
       test.assertEqual(packages[name].lib[0], ".", "When no `lib`, nor `directories.lib` attributes are specified, root folder is used as modules folder");
+    },
+    checkManifest: function (options) {
+      
+    }
+  });
+}
+
+exports.testRelativeFolder = function (test) {
+  let name = "relative-lib";
+  runTest(test, {
+    packagesPath: "folders/" + name,
+    mainPackageName: name,
+    
+    checkPackages: function (packages) {
+      test.assertEqual(packages[name].lib[0], "./relative-lib", "We can pass a relative path for the lib folder");
     },
     checkManifest: function (options) {
       

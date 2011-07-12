@@ -8,6 +8,22 @@ const XpiBuilder = require("xpi-builder");
 const AddonRunner = require("addon-runner");
 const { Ci, Cc } = require("chrome");
 
+const APIUTILS_EXPECTED_FILES = [
+  "api-utils.js",
+  "byte-streams.js",
+  "cuddlefish.js",
+  "file.js",
+  "memory.js",
+  "plain-text-console.js",
+  "securable-module.js",
+  "self-maker.js",
+  "shims.js",
+  "text-streams.js",
+  "traceback.js",
+  "unload.js",
+  "url.js"
+];
+
 // Disable cache in order to speedup this test
 const prefManager = Cc["@mozilla.org/preferences-service;1"]
                     .getService(Ci.nsIPrefBranch);
@@ -89,6 +105,28 @@ function runTest(test, input) {
   let xpiPath = getXpiPath();
   let newOptions = XpiBuilder.build(options, input.mainPackageName, xpiPath);
   
+  // Checkpoint: verify xpi-builder result
+  if (typeof input.checkXPI == "function") {
+    let zip = new (require("zip").ZipReader)(xpiPath);
+    // function either do its custom tests using ZipReader instance
+    // or return a hash of packages files that have to be shipped in the xpi:
+    let expected = input.checkXPI(zip);
+    if (expected) {
+      // We need to ensure minimal api-utils modules set is in the expected list
+      if (expected["api-utils"]) {
+        for each (let module in APIUTILS_EXPECTED_FILES) {
+          if (expected["api-utils"].lib.indexOf(module) === -1)
+            expected["api-utils"].lib.push(module);
+        }
+      }
+      else {
+        expected["api-utils"] = {lib: APIUTILS_EXPECTED_FILES};
+      }
+      assertShip(test, zip, newOptions.jetpackID, expected, "XPI contains expected files");
+    }
+    zip.close();
+  }
+  
   // Run it in same Firefox instance
   // and ensure that we get "Test OK" from STDOUT
   runWithinAndCheck(test, xpiPath, newOptions.jetpackID);
@@ -101,6 +139,33 @@ function assertRequire(test, options, packageName, section, module, requires, me
                    requires.sort().join(", "),
                    message);
 }
+
+function assertShip(test, zr, id, expected, message) {
+  let prefix = id.replace(/@/, "-at-");
+  let expectedList = [];
+  for (let packageName in expected) {
+    let s = expected[packageName];
+    for (let section in s) {
+      for each (let module in s[section])
+        expectedList.push(prefix + "-" + packageName + "-" + section + "/" +module);
+    }
+  }
+  let list = zr.ls("resources/*");
+  for (let i = list.length - 1; i >= 0; i--) {
+    let f = list[i];
+    if (f[f.length - 1] == '/') {
+      // Remove directory entries
+      list.splice(i, 1);
+    }
+    else {
+      list[i] = f.replace(/resources\//, "");
+      if (expectedList.indexOf(list[i]) === -1)
+        test.fail("Unepected file in XPI file: `"+list[i]+"`");
+    }
+  }
+  test.assertEqual(list.sort().join(", "), expectedList.sort().join(", "), message);
+}
+
 
 exports.testManifestLibFirstPriority = function (test) {
   let name = "lib-first-priority";
@@ -260,6 +325,19 @@ exports.testDataFolder = function (test) {
     checkManifest: function (options) {
       assertRequire(test, options, name, "lib", "main.js", ["self"],
                     "`main` requires `self`");
+    },
+    checkXPI: function (zr) {
+      return {
+        "main-package-data": {
+          data: [
+            "data.txt"
+          ],
+          lib: [
+            "main.js"
+          ]
+        }
+      };
+      return expected;
     }
   });
 }
@@ -401,6 +479,31 @@ exports.testJIDWithPackageId = function (test) {
     checkManifest: function (options) {
       let jid = options.jetpackID;
       test.assertEqual(jid, "package-id@jetpack", "Jetpack ID is built on top of package id");
+    }
+  });
+}
+
+exports.testDoNotShipWhenModuleIsUnused = function (test) {
+  let name = "do-not-ship-unused";
+  let id = "dns";
+  runTest(test, {
+    packagesPath: "require/" + name,
+    mainPackageName: name,
+    
+    checkPackages: function (packages) {
+      
+    },
+    checkManifest: function (options) {
+      
+    },
+    checkXPI: function (zr) {
+      return {
+        "do-not-ship-unused": {
+          lib: [
+            "main.js"
+          ]
+        }
+      };
     }
   });
 }

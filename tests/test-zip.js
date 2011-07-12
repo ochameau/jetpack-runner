@@ -25,6 +25,19 @@ exports.testReader = function(test) {
   let zr = new zip.ZipReader(path);
   let dir = require("url").toFilename(self.data.url("tests/zip-extract"));
   zr.extractAll(dir);
+  let files = zr.ls();
+  let expectedFiles = [
+    "test1.txt",
+    "sub-dir/",
+    "sub-dir/test2.txt",
+    "sub-dir/dir/",
+    "sub-dir/dir/test3.txt",
+    "add-dir/",
+    "add-dir/package.json",
+    "add-dir/lib/",
+    "add-dir/lib/main.js"
+  ];
+  test.assertEqual(files.sort().join("\n"), expectedFiles.sort().join("\n"), "Got expected files");
   zr.close();
   test.pass("zip extracted");
   test.waitUntilDone();

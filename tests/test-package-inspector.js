@@ -11,14 +11,19 @@ function readManifest(repoName, packageName) {
 }
 
 exports.testNoName = function (test) {
-  let packages = pi.getPackages(getDataFilePath("test-pi/no-name"));
+  let packages = {};
+  let errors = pi.getPackages(getDataFilePath("test-pi/no-name"), packages);
+  test.assertEqual(errors.length, 0, "No error");
   test.assert("no-name" in packages, "has a 'no-name' package");
   test.assertEqual(packages["no-name"].name, "no-name", "package name defaults to folder name");
 }
 
 exports.testGetPackages = function (test) {
-  let packages = pi.getPackages(getDataFilePath("test-pi/packages"));
-  packages = pi.getPackages(getDataFilePath("test-pi/another-packages/my-other-package"), packages);
+  let packages = {};
+  let errors = pi.getPackages(getDataFilePath("test-pi/packages"), packages);
+  test.assertEqual(errors.length, 0, "No error");
+  errors = pi.getPackages(getDataFilePath("test-pi/another-packages/my-other-package"), packages);
+  test.assertEqual(errors.length, 0, "No error");
   
   let list = [];
   for(var name in packages) {
@@ -41,17 +46,21 @@ exports.testGetPackages = function (test) {
 }
 
 exports.testPackagesConflict = function (test) {
-  let packages = pi.getPackages(getDataFilePath("test-pi/packages"));
-  test.assertRaises(function () {
-    pi.getPackages(getDataFilePath("test-pi/packages-conflict"), packages);
-  },/Duplicate package 'api-utils'/);
+  let packages = {};
+  let errors = pi.getPackages(getDataFilePath("test-pi/packages"), packages);
+  test.assertEqual(errors.length, 0, "No error");
+  errors = pi.getPackages(getDataFilePath("test-pi/packages-conflict"), packages);
+  test.assertEqual(errors.length, 1, "Got our expected error");
+  test.assertMatches(errors[0], /Duplicate package 'api-utils'/, "With expected description");
 }
 
 exports.testGetExtraInfos = function (test) {
   function getModulePath(relPath) {
     return getDataFilePath("test-pi/packages/api-utils/" + relPath);
   }
-  let packages = pi.getPackages(getDataFilePath("test-pi/packages"));
+  let packages = {};
+  let errors = pi.getPackages(getDataFilePath("test-pi/packages"), packages);
+  test.assertEqual(errors.length, 0, "No error");
   let info = pi.getExtraInfo(packages["api-utils"]);
   info.libs.lib.sort(function (a, b) a.name<b.name);
   test.assertEqual(info.libs.lib.length,3);

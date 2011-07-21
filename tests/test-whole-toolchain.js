@@ -33,12 +33,17 @@ prefManager.setBoolPref("extensions.getAddons.cache.enabled", false);
 function getPackages(file) {
   let url = self.data.url("tests/toolchain/"+file);
   let path = URL.toFilename(url);
-  return pi.getPackages(path);
+  let packages = {};
+  let errors = pi.getPackages(path, packages);
+  if (errors.length > 0)
+    throw new Error("Got errors while registering packages from " + path + "\n" 
+                    + errors.join("\n"));
+  return packages;
 }
 
 function includeApiUtils(packages) {
   let pathToApiUtils = path.join(URL.toFilename(self.data.url("")),"..","..","api-utils");
-  return pi.getPackages(pathToApiUtils, packages);
+  pi.getPackages(pathToApiUtils, packages);
 }
 
 function getXpiPath() {
@@ -89,7 +94,7 @@ function runTest(test, input) {
     input.checkPackages(packages);
   
   // Load api-utils package
-  packages = includeApiUtils(packages);
+  includeApiUtils(packages);
   
   // Build manifest
   let options = AddonOptions.buildForRun({

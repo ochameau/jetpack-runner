@@ -26,11 +26,13 @@ Packages.registerIncludePath = function PackagesRegisterIncludePath(path) {
       var count = 0;
       for(var i in Packages.dict)
         count--;
-      var packages = packagesInspector.getPackages(path, Packages.dict);
-      for(var i in packages)
+      var errors = packagesInspector.getPackages(path, Packages.dict);
+      if (errors.length > 0)
+        return alert("Error while adding this include path : \n" + errors.join("\n"));
+      for(var i in Packages.dict)
         count ++;
       if (count <= 0) 
-        return alert("Unable to found a package in this include path");
+        return alert("Unable to found a package in this include path: "+path);
     } catch(e) {
       return alert("Error while adding this include path : \n" + e);
     }
@@ -54,7 +56,7 @@ Packages.refreshList = function PackagesRefreshList() {
         pPath.split(/\/|\\/).slice(-3).join('/') + 
         '</li>');
       if (!path.existsSync(pPath)) continue;
-      Packages.dict = packagesInspector.getPackages(pPath, Packages.dict);
+      packagesInspector.getPackages(pPath, Packages.dict);
     }
     
     if (Packages.dict["addon-kit"] && !prefs.get("sdk-version") && Packages.dict["addon-kit"].version) {

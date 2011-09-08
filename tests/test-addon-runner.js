@@ -59,6 +59,9 @@ function runRemoteAndCheck(test, xpiPath, addonID, runAsApp) {
       } else
         console.log("Got data : "+data);
     },
+    stderr: function(data) {
+      console.log("Got stderr data : "+data);
+    },
     quit: function (data) {
       if (path.existsSync(xpiPath))
         fs.unlinkSync(xpiPath);

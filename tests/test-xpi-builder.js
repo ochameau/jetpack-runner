@@ -9,9 +9,9 @@ const AddonManager = Cu.import("resource://gre/modules/AddonManager.jsm").AddonM
 function getDataFilePath(file) {
   return require("url").toFilename(self.data.url("tests/"+file));
 }
-const xpiPath = getDataFilePath("test-harness/test.xpi");
+const xpiPath = require("temp").path("xpi-builder-test.xpi");
 
-exports.testBuildXPI = function (test) {
+exports.test1BuildXPI = function (test) {
   let apiutilsPackagePath = path.join(require("url").toFilename(self.data.url("")),"..","..","api-utils");
   let apiutils = require("packages-inspector").getPackage(apiutilsPackagePath);
   
@@ -33,7 +33,7 @@ exports.testBuildXPI = function (test) {
   test.pass("XPI built");
 }
 
-exports.testCurrentProcessInstall = function (test) {
+exports.test2CurrentProcessInstall = function (test) {
   
   let file = Cc['@mozilla.org/file/local;1'].createInstance(Ci.nsILocalFile);
   file.initWithPath(xpiPath);

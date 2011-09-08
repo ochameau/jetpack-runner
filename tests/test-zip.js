@@ -2,12 +2,13 @@ const zip = require("zip");
 const self = require("self");
 const fs = require("fs");
 
-let path = require("url").toFilename(self.data.url("tests/test.zip"));
+let path = require("temp").path("test.zip");
+
 require("unload").when(function () {
   fs.unlinkSync(path);
 });
 
-exports.testWriter = function(test) {
+exports.test1Writer = function(test) {
   let zw = new zip.ZipWriter(path);
   let fileToAdd = require("url").toFilename(self.data.url("tests/zip.txt"));
   zw.add("test1.txt", fileToAdd);
@@ -21,9 +22,9 @@ exports.testWriter = function(test) {
   test.pass("zip created");
 }
 
-exports.testReader = function(test) {
+exports.test2Reader = function(test) {
   let zr = new zip.ZipReader(path);
-  let dir = require("url").toFilename(self.data.url("tests/zip-extract"));
+  let dir = require("temp").mkdirSync("zip-extract");
   zr.extractAll(dir);
   let files = zr.ls();
   let expectedFiles = [

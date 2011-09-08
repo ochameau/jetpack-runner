@@ -53,15 +53,30 @@ myComponent.prototype = {
   
   handle : function clh_handle(cmdLine)
   {
-    dump(cmdLine.length+" -- "+cmdLine.handleFlag("jsconsole",false)+"\n");
+    //dump(cmdLine.length+" -- "+cmdLine.handleFlag("jsconsole",false)+"\n");
     
     this.wrappedJSObject = this;
     this.lastCommand = cmdLine;
     
-    let installPath = Components.classes["@mozilla.org/file/directory_service;1"]
-                    .getService(Components.interfaces.nsIProperties)
-                    .get("resource:app", Components.interfaces.nsIFile);
-    dump("installPath : "+installPath.path+"\n");
+    let Cc = Components.classes;
+    let Ci = Components.interfaces;
+    
+    let installPath = null;
+    try {
+      // This statement will throw an exception on platform version after this 
+      // commit: http://hg.mozilla.org/mozilla-central/rev/bab28d839f5e
+      installPath = Cc["@mozilla.org/file/directory_service;1"]
+                      .getService(Ci.nsIProperties)
+                      .get("resource:app", Ci.nsIFile);
+    } catch(e) {
+      var ios = Cc['@mozilla.org/network/io-service;1']
+          .getService(Ci.nsIIOService);
+      var resProt = ios.getProtocolHandler("resource")
+                    .QueryInterface(Ci.nsIResProtocolHandler);
+      let uri = ios.newURI("resource://app/", null, null);
+      installPath = uri.QueryInterface(Ci.nsIFileURL).file;
+    }
+    //dump("installPath : "+installPath.path+"\n");
     // Hack to start jetpack on application startup
     // $installPath need to be set!
     Components.utils.reportError("Instanciate bootstart");

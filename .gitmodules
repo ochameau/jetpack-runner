@@ -1,0 +1,6 @@
+[submodule "packages/moz-js"]
+	path = packages/moz-js
+	url = https://github.com/ochameau/moz-js
+[submodule "packages/subprocess"]
+	path = packages/subprocess
+	url = https://github.com/ochameau/jetpack-subprocess
